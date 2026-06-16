@@ -103,6 +103,46 @@ export type Exercise = {
   isCustom: boolean;
 };
 
+export type SplitDay = {
+  id: string;
+  label: string;
+  dayOrder: number;
+  routineId: string | null;
+};
+
+export type Split = {
+  id: string;
+  name: string;
+  description: string | null;
+  daysPerWeek: number;
+  difficulty: string;
+  experienceLevel: string | null;
+  visibility: string;
+  status: string;
+  days: SplitDay[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+const SPLIT_FIELDS = `
+  id
+  name
+  description
+  daysPerWeek
+  difficulty
+  experienceLevel
+  visibility
+  status
+  createdAt
+  updatedAt
+  days {
+    id
+    label
+    dayOrder
+    routineId
+  }
+`;
+
 export const EXERCISES_QUERY = `
   query Exercises(
     $search: String
@@ -152,6 +192,52 @@ export const CREATE_CUSTOM_EXERCISE_MUTATION = `
       movementPattern
       videoUrl
       isCustom
+    }
+  }
+`;
+
+export const MY_SPLITS_QUERY = `
+  query MySplits {
+    mySplits {
+      ${SPLIT_FIELDS}
+    }
+  }
+`;
+
+export const SPLIT_QUERY = `
+  query Split($id: ID!) {
+    split(id: $id) {
+      ${SPLIT_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_SPLIT_MUTATION = `
+  mutation CreateSplit($input: CreateSplitInput!) {
+    createSplit(input: $input) {
+      ${SPLIT_FIELDS}
+    }
+  }
+`;
+
+export const UPDATE_SPLIT_MUTATION = `
+  mutation UpdateSplit($id: ID!, $input: UpdateSplitInput!) {
+    updateSplit(id: $id, input: $input) {
+      ${SPLIT_FIELDS}
+    }
+  }
+`;
+
+export const DELETE_SPLIT_MUTATION = `
+  mutation DeleteSplit($id: ID!) {
+    deleteSplit(id: $id)
+  }
+`;
+
+export const DUPLICATE_SPLIT_MUTATION = `
+  mutation DuplicateSplit($id: ID!) {
+    duplicateSplit(id: $id) {
+      ${SPLIT_FIELDS}
     }
   }
 `;

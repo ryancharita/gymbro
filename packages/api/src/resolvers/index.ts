@@ -1,6 +1,14 @@
 import { MuscleGroup, type Prisma, prisma } from "@ironlink/db";
 import type { GraphQLContext } from "../context.js";
 import { clerk, requireAuth } from "../context.js";
+import {
+  createSplit,
+  defaultDayLabels,
+  deleteSplit,
+  duplicateSplit,
+  getOwnedSplit,
+  updateSplit,
+} from "../lib/splits.js";
 
 type ExerciseWhereInput = Prisma.ExerciseWhereInput;
 
@@ -123,6 +131,33 @@ export const resolvers = {
       return prisma.split.findMany({
         where: { userId: user.id },
         orderBy: { updatedAt: "desc" },
+        include: {
+          days: {
+            orderBy: { dayOrder: "asc" },
+          },
+        },
+      });
+    },
+
+    split: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return getOwnedSplit(user.id, args.id);
+    },
+  },
+
+  Split: {
+    days: async (parent: { id: string; days?: unknown[] }) => {
+      if (parent.days) {
+        return parent.days;
+      }
+
+      return prisma.splitDay.findMany({
+        where: { splitId: parent.id },
+        orderBy: { dayOrder: "asc" },
       });
     },
   },
@@ -306,6 +341,85 @@ export const resolvers = {
           userId: user.id,
         },
       });
+    },
+
+    createSplit: async (
+      _parent: unknown,
+      args: {
+        input: {
+          name: string;
+          description?: string;
+          daysPerWeek: number;
+          difficulty: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+          experienceLevel?: string;
+          visibility?: "PUBLIC" | "FRIENDS_ONLY" | "PRIVATE";
+          status?: "DRAFT" | "PUBLISHED";
+          days?: { label: string }[];
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      const name = args.input.name.trim();
+
+      if (!name) {
+        throw new Error("Split name is required");
+      }
+
+      return createSplit(user.id, {
+        name,
+        description: args.input.description,
+        daysPerWeek: args.input.daysPerWeek,
+        difficulty: args.input.difficulty,
+        experienceLevel: args.input.experienceLevel,
+        visibility: args.input.visibility,
+        status: args.input.status,
+        days: args.input.days ?? defaultDayLabels(args.input.daysPerWeek),
+      });
+    },
+
+    updateSplit: async (
+      _parent: unknown,
+      args: {
+        id: string;
+        input: {
+          name?: string;
+          description?: string;
+          daysPerWeek?: number;
+          difficulty?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+          experienceLevel?: string;
+          visibility?: "PUBLIC" | "FRIENDS_ONLY" | "PRIVATE";
+          status?: "DRAFT" | "PUBLISHED";
+          days?: { label: string }[];
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+
+      if (args.input.name !== undefined && !args.input.name.trim()) {
+        throw new Error("Split name is required");
+      }
+
+      return updateSplit(user.id, args.id, args.input);
+    },
+
+    deleteSplit: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return deleteSplit(user.id, args.id);
+    },
+
+    duplicateSplit: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return duplicateSplit(user.id, args.id);
     },
   },
 };

@@ -70,9 +70,45 @@ type Split {
   description: String
   daysPerWeek: Int!
   difficulty: SplitDifficulty!
+  experienceLevel: String
   visibility: SplitVisibility!
   status: SplitStatus!
+  days: [SplitDay!]!
   createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SplitDay {
+  id: ID!
+  label: String!
+  dayOrder: Int!
+  routineId: ID
+}
+
+input SplitDayInput {
+  label: String!
+}
+
+input CreateSplitInput {
+  name: String!
+  description: String
+  daysPerWeek: Int!
+  difficulty: SplitDifficulty!
+  experienceLevel: String
+  visibility: SplitVisibility
+  status: SplitStatus
+  days: [SplitDayInput!]
+}
+
+input UpdateSplitInput {
+  name: String
+  description: String
+  daysPerWeek: Int
+  difficulty: SplitDifficulty
+  experienceLevel: String
+  visibility: SplitVisibility
+  status: SplitStatus
+  days: [SplitDayInput!]
 }
 
 input CompleteOnboardingInput {
@@ -109,6 +145,7 @@ type Query {
   exercises(search: String, muscleGroup: String, equipment: String, limit: Int = 50, offset: Int = 0): ExercisePage!
   exerciseEquipmentOptions: [String!]!
   mySplits: [Split!]!
+  split(id: ID!): Split
 }
 
 type Mutation {
@@ -117,4 +154,8 @@ type Mutation {
   updatePreferences(input: UpdatePreferencesInput!): User!
   deleteAccount: Boolean!
   createCustomExercise(input: CreateCustomExerciseInput!): Exercise!
+  createSplit(input: CreateSplitInput!): Split!
+  updateSplit(id: ID!, input: UpdateSplitInput!): Split!
+  deleteSplit(id: ID!): Boolean!
+  duplicateSplit(id: ID!): Split!
 }
