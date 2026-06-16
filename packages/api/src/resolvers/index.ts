@@ -192,6 +192,13 @@ export const resolvers = {
     },
   },
 
+  SplitDay: {
+    routine: async (parent: { routineId?: string | null }) => {
+      if (!parent.routineId) return null;
+      return prisma.routine.findUnique({ where: { id: parent.routineId } });
+    },
+  },
+
   RoutineExercise: {
     exerciseId: (parent: { exerciseId: string }) => parent.exerciseId,
   },

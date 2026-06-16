@@ -5,14 +5,11 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
-import DraggableFlatList, { ScaleDecorator } from "react-native-draggable-flatlist";
 import { Button } from "../../src/components/Button";
 import { Chip } from "../../src/components/Chip";
 import { FormField } from "../../src/components/FormField";
@@ -106,6 +103,20 @@ export default function RoutineBuilderScreen() {
     );
   };
 
+  const moveItem = (itemId: string, direction: "up" | "down") => {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === itemId);
+      if (index < 0) return current;
+      if (direction === "up" && index === 0) return current;
+      if (direction === "down" && index === current.length - 1) return current;
+
+      const swapIndex = direction === "up" ? index - 1 : index + 1;
+      const next = [...current];
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+      return next;
+    });
+  };
+
   const saveRoutine = async () => {
     if (!name.trim()) {
       setError("Routine name is required");
@@ -160,7 +171,7 @@ export default function RoutineBuilderScreen() {
   return (
     <ScreenLayout
       title={isNew ? "New routine" : "Edit routine"}
-      subtitle="Add exercises, configure sets/reps, and reorder by drag-and-drop."
+      subtitle="Add exercises, configure sets/reps, and reorder with move controls."
     >
       <FormField label="Routine name" value={name} onChangeText={setName} />
       <FormField
@@ -173,110 +184,113 @@ export default function RoutineBuilderScreen() {
 
       <Button label="Add exercise" onPress={() => setPickerOpen(true)} />
 
-      <DraggableFlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        onDragEnd={({ data }) => setItems(data)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item, drag, isActive }) => (
-          <ScaleDecorator>
-            <Pressable
-              onLongPress={drag}
-              delayLongPress={150}
-              style={[styles.itemCard, isActive ? styles.itemCardActive : null]}
-            >
-              <Text style={styles.itemTitle}>{item.exercise.name}</Text>
-              <Text style={styles.dragHint}>Long press and drag to reorder</Text>
-
-              <Text style={styles.label}>Set type</Text>
-              <View style={styles.rowWrap}>
-                {ROUTINE_SET_TYPES.map((type) => (
-                  <Chip
-                    key={`${item.id}-${type}`}
-                    label={SET_TYPE_LABELS[type]}
-                    selected={item.setType === type}
-                    onPress={() => updateItem(item.id, { setType: type })}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.inline}>
-                <FormField
-                  label="Sets"
-                  value={String(item.sets)}
-                  onChangeText={(value) =>
-                    updateItem(item.id, { sets: Number.parseInt(value || "0", 10) || 0 })
-                  }
-                  keyboardType="number-pad"
-                  style={styles.inlineInput}
-                />
-                <FormField
-                  label="Reps min"
-                  value={item.repsMin?.toString() ?? ""}
-                  onChangeText={(value) =>
-                    updateItem(item.id, {
-                      repsMin: value ? Number.parseInt(value, 10) || null : null,
-                    })
-                  }
-                  keyboardType="number-pad"
-                  style={styles.inlineInput}
-                />
-                <FormField
-                  label="Reps max"
-                  value={item.repsMax?.toString() ?? ""}
-                  onChangeText={(value) =>
-                    updateItem(item.id, {
-                      repsMax: value ? Number.parseInt(value, 10) || null : null,
-                    })
-                  }
-                  keyboardType="number-pad"
-                  style={styles.inlineInput}
-                />
-              </View>
-
-              <View style={styles.inline}>
-                <FormField
-                  label="Weight target"
-                  value={item.weightTarget?.toString() ?? ""}
-                  onChangeText={(value) =>
-                    updateItem(item.id, {
-                      weightTarget: value ? Number.parseFloat(value) || null : null,
-                    })
-                  }
-                  keyboardType="decimal-pad"
-                  style={styles.inlineInput}
-                />
-                <FormField
-                  label="Rest sec"
-                  value={item.restSeconds?.toString() ?? ""}
-                  onChangeText={(value) =>
-                    updateItem(item.id, {
-                      restSeconds: value ? Number.parseInt(value, 10) || null : null,
-                    })
-                  }
-                  keyboardType="number-pad"
-                  style={styles.inlineInput}
-                />
-              </View>
-
-              <FormField
-                label="Notes"
-                value={item.notes ?? ""}
-                onChangeText={(value) => updateItem(item.id, { notes: value })}
-                style={styles.notesInput}
-              />
-
+      <ScrollView contentContainerStyle={styles.list}>
+        {items.map((item, index) => (
+          <View key={item.id} style={styles.itemCard}>
+            <Text style={styles.itemTitle}>{item.exercise.name}</Text>
+            <View style={styles.reorderRow}>
               <Button
-                label="Remove exercise"
+                label="Move up"
                 variant="ghost"
-                onPress={() =>
-                  setItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
-                }
+                onPress={() => moveItem(item.id, "up")}
+                disabled={index === 0}
               />
-            </Pressable>
-          </ScaleDecorator>
-        )}
-      />
+              <Button
+                label="Move down"
+                variant="ghost"
+                onPress={() => moveItem(item.id, "down")}
+                disabled={index === items.length - 1}
+              />
+            </View>
+
+            <Text style={styles.label}>Set type</Text>
+            <View style={styles.rowWrap}>
+              {ROUTINE_SET_TYPES.map((type) => (
+                <Chip
+                  key={`${item.id}-${type}`}
+                  label={SET_TYPE_LABELS[type]}
+                  selected={item.setType === type}
+                  onPress={() => updateItem(item.id, { setType: type })}
+                />
+              ))}
+            </View>
+
+            <View style={styles.inline}>
+              <FormField
+                label="Sets"
+                value={String(item.sets)}
+                onChangeText={(value) =>
+                  updateItem(item.id, { sets: Number.parseInt(value || "0", 10) || 0 })
+                }
+                keyboardType="number-pad"
+                style={styles.inlineInput}
+              />
+              <FormField
+                label="Reps min"
+                value={item.repsMin?.toString() ?? ""}
+                onChangeText={(value) =>
+                  updateItem(item.id, {
+                    repsMin: value ? Number.parseInt(value, 10) || null : null,
+                  })
+                }
+                keyboardType="number-pad"
+                style={styles.inlineInput}
+              />
+              <FormField
+                label="Reps max"
+                value={item.repsMax?.toString() ?? ""}
+                onChangeText={(value) =>
+                  updateItem(item.id, {
+                    repsMax: value ? Number.parseInt(value, 10) || null : null,
+                  })
+                }
+                keyboardType="number-pad"
+                style={styles.inlineInput}
+              />
+            </View>
+
+            <View style={styles.inline}>
+              <FormField
+                label="Weight target"
+                value={item.weightTarget?.toString() ?? ""}
+                onChangeText={(value) =>
+                  updateItem(item.id, {
+                    weightTarget: value ? Number.parseFloat(value) || null : null,
+                  })
+                }
+                keyboardType="decimal-pad"
+                style={styles.inlineInput}
+              />
+              <FormField
+                label="Rest sec"
+                value={item.restSeconds?.toString() ?? ""}
+                onChangeText={(value) =>
+                  updateItem(item.id, {
+                    restSeconds: value ? Number.parseInt(value, 10) || null : null,
+                  })
+                }
+                keyboardType="number-pad"
+                style={styles.inlineInput}
+              />
+            </View>
+
+            <FormField
+              label="Notes"
+              value={item.notes ?? ""}
+              onChangeText={(value) => updateItem(item.id, { notes: value })}
+              style={styles.notesInput}
+            />
+
+            <Button
+              label="Remove exercise"
+              variant="ghost"
+              onPress={() =>
+                setItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
+              }
+            />
+          </View>
+        ))}
+      </ScrollView>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={saving ? "Saving..." : "Save routine"} onPress={() => void saveRoutine()} />
@@ -331,9 +345,8 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  itemCardActive: { borderColor: "#f97316", opacity: 0.95 },
   itemTitle: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 6 },
-  dragHint: { color: "#737373", fontSize: 12, marginBottom: 8 },
+  reorderRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   label: { color: "#d4d4d4", marginBottom: 8 },
   rowWrap: { flexDirection: "row", flexWrap: "wrap", marginBottom: 6 },
   inline: { flexDirection: "row", gap: 8 },

@@ -108,6 +108,7 @@ export type SplitDay = {
   label: string;
   dayOrder: number;
   routineId: string | null;
+  routine?: { id: string; name: string } | null;
 };
 
 export type Split = {
@@ -163,6 +164,10 @@ const SPLIT_FIELDS = `
     label
     dayOrder
     routineId
+    routine {
+      id
+      name
+    }
   }
 `;
 

@@ -15,7 +15,12 @@ import {
 
 export default function RoutinesScreen() {
   const router = useRouter();
-  const { splitDayId } = useLocalSearchParams<{ splitDayId?: string }>();
+  const { splitDayId: splitDayIdParam } = useLocalSearchParams<{
+    splitDayId?: string | string[];
+  }>();
+  const splitDayId = Array.isArray(splitDayIdParam)
+    ? splitDayIdParam[0]
+    : splitDayIdParam;
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
@@ -53,7 +58,10 @@ export default function RoutinesScreen() {
   );
 
   const assignRoutine = async (routineId: string) => {
-    if (!splitDayId) return;
+    if (!splitDayId) {
+      Alert.alert("Missing split day", "Could not determine which split day to assign.");
+      return;
+    }
     try {
       const client = await createAuthenticatedClient(getTokenRef.current);
       await client.request(ASSIGN_ROUTINE_TO_SPLIT_DAY_MUTATION, { splitDayId, routineId });

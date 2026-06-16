@@ -91,6 +91,7 @@ type SplitDay {
   label: String!
   dayOrder: Int!
   routineId: ID
+  routine: Routine
 }
 
 type Routine {

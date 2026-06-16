@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -48,48 +48,54 @@ export default function EditSplitScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadSplit = async () => {
-      if (!id) return;
-      if (!isLoaded) return;
-      if (!isSignedIn) {
-        setSplit(null);
-        setLoading(false);
+  const loadSplit = useCallback(async () => {
+    if (!id) return;
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSplit(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const client = await createAuthenticatedClient(getTokenRef.current);
+      const data = await client.request<{ split: Split | null }>(SPLIT_QUERY, {
+        id,
+      });
+
+      if (!data.split) {
+        setError("Split not found");
         return;
       }
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const client = await createAuthenticatedClient(getTokenRef.current);
-        const data = await client.request<{ split: Split | null }>(SPLIT_QUERY, {
-          id,
-        });
-
-        if (!data.split) {
-          setError("Split not found");
-          return;
-        }
-
-        setSplit(data.split);
-        setName(data.split.name);
-        setDescription(data.split.description ?? "");
-        setDaysPerWeek(String(data.split.daysPerWeek));
-        setDifficulty(data.split.difficulty);
-        setExperienceLevel(data.split.experienceLevel ?? "");
-        setVisibility(data.split.visibility);
-        setStatus(data.split.status);
-        setDayLabels(data.split.days.map((day) => day.label));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not load split");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadSplit();
+      setSplit(data.split);
+      setName(data.split.name);
+      setDescription(data.split.description ?? "");
+      setDaysPerWeek(String(data.split.daysPerWeek));
+      setDifficulty(data.split.difficulty);
+      setExperienceLevel(data.split.experienceLevel ?? "");
+      setVisibility(data.split.visibility);
+      setStatus(data.split.status);
+      setDayLabels(data.split.days.map((day) => day.label));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load split");
+    } finally {
+      setLoading(false);
+    }
   }, [id, isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    void loadSplit();
+  }, [loadSplit]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSplit();
+    }, [loadSplit]),
+  );
 
   const saveSplit = async () => {
     if (!id) return;
@@ -260,6 +266,11 @@ export default function EditSplitScreen() {
                   })
                 }
               />
+              {splitDay?.routineId ? (
+                <Text style={styles.assignedRoutine}>
+                  Assigned routine: {splitDay.routine?.name ?? "Routine linked"}
+                </Text>
+              ) : null}
             </View>
           );
         })}
@@ -307,6 +318,12 @@ const styles = StyleSheet.create({
   error: {
     color: "#ef4444",
     marginBottom: 12,
+  },
+  assignedRoutine: {
+    color: "#a3a3a3",
+    fontSize: 13,
+    marginBottom: 12,
+    marginTop: -6,
   },
   loader: {
     marginTop: 32,
