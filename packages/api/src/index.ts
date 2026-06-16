@@ -1,3 +1,4 @@
+import "./env.js";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import mercurius from "mercurius";

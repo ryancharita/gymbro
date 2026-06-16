@@ -73,9 +73,14 @@ See [Linear — gym-bro project](https://linear.app/rjcha/project/gym-bro) for f
 | `npm run db:migrate` | Run Prisma migrations (dev) |
 | `npm run docker:up` | Start PostgreSQL + Redis containers |
 
-## Environment
+### Clerk (RJC-15)
 
-Secrets are never committed. See `.env.example` files in each package for required variables.
+1. Create a Clerk application at [clerk.com](https://clerk.com)
+2. Enable **Email**, **Google**, and **Apple** sign-in strategies in the Clerk dashboard
+3. Copy keys into `apps/mobile/.env` and `packages/api/.env`
+4. Set `EXPO_PUBLIC_CLERK_ACCOUNT_PORTAL_URL` to your Clerk Account Portal URL (Settings → Account Portal)
+5. Configure the Clerk webhook endpoint: `POST https://your-api/webhooks/clerk` for `user.created` and `user.deleted`
+
 
 - **Mobile:** `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_API_URL`
 - **API:** `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `DATABASE_URL`, `REDIS_URL`

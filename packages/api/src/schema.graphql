@@ -24,7 +24,16 @@ type User {
   profilePhotoUrl: String
   city: String
   gymName: String
+  experienceLevel: String
+  trainingStyleTags: [String!]!
+  goals: [String!]!
   onboardingComplete: Boolean!
+  isPrivateProfile: Boolean!
+  notifyOnFollow: Boolean!
+  notifyOnLike: Boolean!
+  notifyOnComment: Boolean!
+  notifyWeeklySummary: Boolean!
+  optOutBuddyFinder: Boolean!
   createdAt: DateTime!
 }
 
@@ -50,13 +59,44 @@ type Split {
   createdAt: DateTime!
 }
 
+input CompleteOnboardingInput {
+  username: String!
+  bio: String
+  profilePhotoUrl: String
+  gymName: String
+  experienceLevel: String!
+  trainingStyleTags: [String!]!
+  goals: [String!]!
+}
+
+input UpdateProfileInput {
+  username: String
+  bio: String
+  profilePhotoUrl: String
+  gymName: String
+  city: String
+}
+
+input UpdatePreferencesInput {
+  isPrivateProfile: Boolean
+  notifyOnFollow: Boolean
+  notifyOnLike: Boolean
+  notifyOnComment: Boolean
+  notifyWeeklySummary: Boolean
+  optOutBuddyFinder: Boolean
+}
+
 type Query {
   health: String!
   me: User
+  isUsernameAvailable(username: String!): Boolean!
   exercises(search: String, muscleGroup: String, equipment: String, limit: Int = 50, offset: Int = 0): [Exercise!]!
   mySplits: [Split!]!
 }
 
 type Mutation {
-  _placeholder: Boolean
+  completeOnboarding(input: CompleteOnboardingInput!): User!
+  updateProfile(input: UpdateProfileInput!): User!
+  updatePreferences(input: UpdatePreferencesInput!): User!
+  deleteAccount: Boolean!
 }
