@@ -211,6 +211,7 @@ model WorkoutSet {
   weight      Float?
   reps        Int?
   durationSec Int?     @map("duration_sec")
+  notes       String?
   isCompleted Boolean  @default(false) @map("is_completed")
   isPr        Boolean  @default(false) @map("is_pr")
   createdAt   DateTime @default(now()) @map("created_at")

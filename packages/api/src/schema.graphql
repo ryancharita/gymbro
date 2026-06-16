@@ -25,6 +25,12 @@ enum SetType {
   TIME_BASED
 }
 
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
 type User {
   id: ID!
   username: String
@@ -117,6 +123,33 @@ type RoutineExercise {
   sortOrder: Int!
 }
 
+type WorkoutSession {
+  id: ID!
+  routineId: ID
+  routine: Routine
+  status: SessionStatus!
+  startedAt: DateTime!
+  completedAt: DateTime
+  notes: String
+  durationSeconds: Int!
+  totalVolumeKg: Float!
+  sets: [WorkoutSet!]!
+}
+
+type WorkoutSet {
+  id: ID!
+  exerciseId: ID!
+  exercise: Exercise!
+  setNumber: Int!
+  setType: SetType!
+  weight: Float
+  reps: Int
+  durationSec: Int
+  notes: String
+  isCompleted: Boolean!
+  createdAt: DateTime!
+}
+
 input SplitDayInput {
   label: String!
 }
@@ -166,6 +199,15 @@ input UpdateRoutineInput {
   exercises: [RoutineExerciseInput!]
 }
 
+input LogWorkoutSetInput {
+  setId: ID!
+  weight: Float
+  reps: Int
+  durationSec: Int
+  notes: String
+  isCompleted: Boolean
+}
+
 input CompleteOnboardingInput {
   username: String!
   bio: String
@@ -203,6 +245,9 @@ type Query {
   split(id: ID!): Split
   myRoutines: [Routine!]!
   routine(id: ID!): Routine
+  myWorkoutSessions(limit: Int = 20, offset: Int = 0): [WorkoutSession!]!
+  workoutSession(id: ID!): WorkoutSession
+  activeWorkoutSession: WorkoutSession
 }
 
 type Mutation {
@@ -219,4 +264,8 @@ type Mutation {
   updateRoutine(id: ID!, input: UpdateRoutineInput!): Routine!
   deleteRoutine(id: ID!): Boolean!
   assignRoutineToSplitDay(splitDayId: ID!, routineId: ID): SplitDay!
+  startWorkoutSession(routineId: ID!): WorkoutSession!
+  logWorkoutSet(input: LogWorkoutSetInput!): WorkoutSet!
+  completeWorkoutSession(id: ID!, notes: String): WorkoutSession!
+  abandonWorkoutSession(id: ID!, notes: String): WorkoutSession!
 }
