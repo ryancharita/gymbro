@@ -14,7 +14,7 @@ import { Button } from "../src/components/Button";
 import { FormField } from "../src/components/FormField";
 import { ScreenLayout } from "../src/components/ScreenLayout";
 import { useAppUser } from "../src/hooks/useAppUser";
-import { createApiClient } from "../src/lib/api";
+import { createAuthenticatedClient } from "../src/lib/auth";
 import {
   DELETE_ACCOUNT_MUTATION,
   UPDATE_PREFERENCES_MUTATION,
@@ -60,8 +60,7 @@ export default function SettingsScreen() {
     setError(null);
 
     try {
-      const token = await getToken();
-      const client = createApiClient(token);
+      const client = await createAuthenticatedClient(getToken);
 
       await client.request(UPDATE_PROFILE_MUTATION, {
         input: {
@@ -86,8 +85,7 @@ export default function SettingsScreen() {
     setError(null);
 
     try {
-      const token = await getToken();
-      const client = createApiClient(token);
+      const client = await createAuthenticatedClient(getToken);
 
       await client.request(UPDATE_PREFERENCES_MUTATION, {
         input: {
@@ -140,8 +138,7 @@ export default function SettingsScreen() {
 
   const deleteAccount = async () => {
     try {
-      const token = await getToken();
-      const client = createApiClient(token);
+      const client = await createAuthenticatedClient(getToken);
       await client.request(DELETE_ACCOUNT_MUTATION);
       await signOut();
       router.replace("/sign-in");

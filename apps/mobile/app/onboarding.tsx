@@ -19,7 +19,7 @@ import {
   POPULAR_GYMS,
   TRAINING_STYLE_TAGS,
 } from "../src/constants/onboarding";
-import { createApiClient } from "../src/lib/api";
+import { createAuthenticatedClient } from "../src/lib/auth";
 import {
   COMPLETE_ONBOARDING_MUTATION,
   USERNAME_AVAILABLE_QUERY,
@@ -71,8 +71,7 @@ export default function OnboardingScreen() {
         return false;
       }
 
-      const token = await getToken();
-      const client = createApiClient(token);
+      const client = await createAuthenticatedClient(getToken);
       const data = await client.request<{ isUsernameAvailable: boolean }>(
         USERNAME_AVAILABLE_QUERY,
         { username: username.trim() },
@@ -114,8 +113,7 @@ export default function OnboardingScreen() {
     setLoading(true);
 
     try {
-      const token = await getToken();
-      const client = createApiClient(token);
+      const client = await createAuthenticatedClient(getToken);
 
       await client.request(COMPLETE_ONBOARDING_MUTATION, {
         input: {

@@ -16,10 +16,11 @@
     "@fastify/cors": "^10.0.2",
     "@ironlink/db": "*",
     "@ironlink/shared": "*",
-    "fastify": "^4.28.1",
+    "fastify": "^5.2.1",
     "graphql": "^16.10.0",
     "ioredis": "^5.4.2",
     "mercurius": "^15.1.0",
+    "dotenv": "^16.4.7",
     "svix": "^1.45.0"
   },
   "devDependencies": {

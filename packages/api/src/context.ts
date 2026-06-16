@@ -19,6 +19,10 @@ export async function buildContext(
 
   const token = authHeader.slice("Bearer ".length);
 
+  if (!process.env.CLERK_SECRET_KEY) {
+    throw new Error("CLERK_SECRET_KEY is not configured in packages/api/.env");
+  }
+
   try {
     const payload = await verifyToken(token, {
       secretKey: process.env.CLERK_SECRET_KEY,
@@ -28,7 +32,11 @@ export async function buildContext(
     const user = await ensureUser(clerkUserId);
 
     return { user, clerkUserId };
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Clerk JWT verification failed:", error);
+    }
+
     return { user: null, clerkUserId: null };
   }
 }
