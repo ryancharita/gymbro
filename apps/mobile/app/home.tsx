@@ -2,6 +2,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { spacing, typography, uiPatterns } from "@ironlink/shared";
+import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../src/components/Button";
 import { ScreenLayout } from "../src/components/ScreenLayout";
 import { useAppUser } from "../src/hooks/useAppUser";
@@ -15,77 +16,66 @@ export default function HomeScreen() {
 
   return (
     <ScreenLayout
-      title={`Hey, ${user?.username ?? "athlete"}`}
-      subtitle="Build momentum today. Track sessions, review progress, and share updates."
+      title="Your Split"
+      subtitle={user?.gymName ? `${user.gymName} · 6 Day Program` : "Push/Pull/Legs · 6 Day Program"}
       withBottomNav
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-            {user?.gymName ? `Training at ${user.gymName}` : "Set your gym base"}
-          </Text>
-          <Text style={[styles.cardBody, { color: colors.textSecondary }]}>
-            {user?.experienceLevel
-              ? `Current level: ${user.experienceLevel}`
-              : "Add your level and preferences to personalize recommendations."}
-          </Text>
-          <Button
-            label={user?.id ? "Open profile" : "Complete profile"}
-            onPress={() => (user?.id ? router.push(`/profile/${user.id}`) : router.push("/settings"))}
-          />
+        <View style={styles.statsRow}>
+          <MetricCard icon="trending-up" value="6" label="Week Streak" />
+          <MetricCard icon="barbell" value="48" label="Workouts" />
+          <MetricCard icon="flash" value="387" label="Avg Cals" />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Start training</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Split Templates</Text>
+          <Text style={[styles.linkLabel, { color: colors.accent }]}>Edit Split</Text>
+        </View>
         <View style={styles.grid}>
           <ActionCard
-            title="Workout logging"
-            description="Continue an active session or start from your routine."
-            onPress={() => router.push("/workouts")}
-          />
-          <ActionCard
-            title="My splits"
-            description="Structure your week and publish your latest split."
+            title="Upper/Lower Split"
+            description="4 days/week · Beginner friendly"
+            trailing="+"
             onPress={() => router.push("/splits")}
           />
           <ActionCard
-            title="Routines"
-            description="Program exercises, sets, and rest for each day."
+            title="Bro Split"
+            description="5 days/week · Muscle isolation"
+            trailing="+"
             onPress={() => router.push("/routines")}
           />
           <ActionCard
-            title="Exercise library"
-            description="Find or create exercises for your plans."
-            onPress={() => router.push("/exercises")}
+            title="Create Custom Split"
+            description="Design your own program"
+            trailing="+"
+            danger
+            onPress={() => router.push("/splits/create")}
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Insights & social</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Active Buddies</Text>
+          <Text style={[styles.linkLabel, { color: colors.accent }]}>See All</Text>
+        </View>
         <View style={styles.grid}>
-          <ActionCard
-            title="Progress history"
-            description="Review trends, PRs, and exercise progression."
-            onPress={() => router.push("/progress")}
-          />
-          <ActionCard
-            title="Home feed"
-            description="See updates from people you follow."
-            onPress={() => router.push("/feed")}
-          />
-          <ActionCard
-            title="Account settings"
-            description="Manage profile, privacy, and notifications."
-            onPress={() => router.push("/settings")}
-          />
+          <BuddyRow name="Sarah Chen" status="Working out now · Leg Day" />
+          <BuddyRow name="Marcus Johnson" status="At gym · Cardio Session" />
         </View>
 
         <Button
-          label="Sign out"
-          variant="ghost"
-          onPress={async () => {
-            await signOut();
-            router.replace("/sign-in");
-          }}
+          label="Start Workout"
+          onPress={() => router.push("/workouts")}
         />
+        <Button label="Explore Feed" variant="ghost" onPress={() => router.push("/feed")} />
+        <Button label="Progress" variant="ghost" onPress={() => router.push("/progress")} />
+        {user?.id ? (
+          <Button label="Profile" variant="ghost" onPress={() => router.push(`/profile/${user.id}`)} />
+        ) : null}
+        <Button label="Settings" variant="ghost" onPress={() => router.push("/settings")} />
+        <Button label="Sign out" variant="ghost" onPress={async () => {
+          await signOut();
+          router.replace("/sign-in");
+        }} />
       </ScrollView>
     </ScreenLayout>
   );
@@ -93,10 +83,14 @@ export default function HomeScreen() {
   function ActionCard({
     title,
     description,
+    trailing,
+    danger = false,
     onPress,
   }: {
     title: string;
     description: string;
+    trailing?: string;
+    danger?: boolean;
     onPress: () => void;
   }) {
     return (
@@ -107,14 +101,52 @@ export default function HomeScreen() {
           styles.actionCard,
           {
             backgroundColor: colors.surface,
-            borderColor: colors.border,
+            borderColor: danger ? colors.accent : colors.border,
           },
           pressed ? { backgroundColor: colors.surfaceElevated } : null,
         ]}
       >
-        <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>{title}</Text>
+        <View style={styles.actionHeader}>
+          <Text style={[styles.actionTitle, { color: danger ? colors.accent : colors.textPrimary }]}>
+            {title}
+          </Text>
+          {trailing ? <Text style={[styles.trailing, { color: colors.accent }]}>{trailing}</Text> : null}
+        </View>
         <Text style={[styles.actionBody, { color: colors.textSecondary }]}>{description}</Text>
       </Pressable>
+    );
+  }
+
+  function MetricCard({
+    icon,
+    value,
+    label,
+  }: {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    value: string;
+    label: string;
+  }) {
+    return (
+      <View style={[styles.metricCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.metricIconWrap, { backgroundColor: colors.surfaceElevated }]}>
+          <Ionicons name={icon} size={16} color={colors.accent} />
+        </View>
+        <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{value}</Text>
+        <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{label}</Text>
+      </View>
+    );
+  }
+
+  function BuddyRow({ name, status }: { name: string; status: string }) {
+    return (
+      <View style={[styles.buddyRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.avatar, { backgroundColor: colors.surfaceElevated }]} />
+        <View style={styles.buddyText}>
+          <Text style={[styles.buddyName, { color: colors.textPrimary }]}>{name}</Text>
+          <Text style={[styles.buddyStatus, { color: colors.textSecondary }]}>{status}</Text>
+        </View>
+        <Button label="Join" variant="ghost" onPress={() => router.push("/workouts")} />
+      </View>
     );
   }
 }
@@ -123,27 +155,44 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.md,
   },
-  card: {
-    ...uiPatterns.card,
-    borderRadius: 16,
-    padding: spacing.lg,
+  statsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  cardTitle: {
+  metricCard: {
+    ...uiPatterns.card,
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  metricIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricValue: {
     ...typography.heading,
-    marginBottom: spacing.sm,
+    lineHeight: 24,
   },
-  cardBody: {
-    ...typography.body,
-    marginBottom: spacing.xs,
-  },
-  cardMeta: {
+  metricLabel: {
     ...typography.caption,
   },
   sectionTitle: {
-    ...typography.label,
+    ...typography.heading,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
+  },
+  linkLabel: {
+    ...typography.label,
   },
   grid: {
     gap: spacing.sm,
@@ -155,10 +204,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xs,
   },
+  actionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
   actionTitle: {
     ...typography.label,
   },
+  trailing: {
+    ...typography.heading,
+    lineHeight: 20,
+  },
   actionBody: {
+    ...typography.caption,
+  },
+  buddyRow: {
+    ...uiPatterns.card,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  buddyText: {
+    flex: 1,
+  },
+  buddyName: {
+    ...typography.label,
+    marginBottom: 2,
+  },
+  buddyStatus: {
     ...typography.caption,
   },
 });

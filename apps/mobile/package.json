@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@clerk/clerk-expo": "^2.9.0",
+    "@expo/vector-icons": "^15.1.1",
     "@ironlink/shared": "*",
     "expo": "~56.0.12",
     "expo-auth-session": "~7.0.10",
