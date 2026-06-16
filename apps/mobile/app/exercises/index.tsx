@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -29,7 +29,9 @@ const PAGE_SIZE = 50;
 
 export default function ExercisesScreen() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -49,8 +51,13 @@ export default function ExercisesScreen() {
   }, [search]);
 
   const loadEquipmentOptions = useCallback(async () => {
+    if (!isLoaded || !isSignedIn) {
+      setEquipmentOptions([]);
+      return;
+    }
+
     try {
-      const client = await createAuthenticatedClient(getToken);
+      const client = await createAuthenticatedClient(getTokenRef.current);
       const data = await client.request<{ exerciseEquipmentOptions: string[] }>(
         EXERCISE_EQUIPMENT_OPTIONS_QUERY,
       );
@@ -58,10 +65,19 @@ export default function ExercisesScreen() {
     } catch {
       setEquipmentOptions([]);
     }
-  }, [getToken]);
+  }, [isLoaded, isSignedIn]);
 
   const loadExercises = useCallback(
     async (nextOffset: number, append: boolean) => {
+      if (!isLoaded || !isSignedIn) {
+        setExercises([]);
+        setTotalCount(0);
+        setOffset(0);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+
       if (append) {
         setLoadingMore(true);
       } else {
@@ -70,7 +86,7 @@ export default function ExercisesScreen() {
       setError(null);
 
       try {
-        const client = await createAuthenticatedClient(getToken);
+        const client = await createAuthenticatedClient(getTokenRef.current);
         const data = await client.request<{
           exercises: { items: Exercise[]; totalCount: number };
         }>(EXERCISES_QUERY, {
@@ -97,7 +113,7 @@ export default function ExercisesScreen() {
         setLoadingMore(false);
       }
     },
-    [debouncedSearch, equipment, getToken, muscleGroup],
+    [debouncedSearch, equipment, isLoaded, isSignedIn, muscleGroup],
   );
 
   useEffect(() => {

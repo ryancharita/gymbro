@@ -169,6 +169,7 @@ export const EXERCISES_QUERY = `
         movementPattern
         videoUrl
         isCustom
+      }
     }
   }
 `;

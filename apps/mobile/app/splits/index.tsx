@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,23 +20,34 @@ import { createAuthenticatedClient } from "../../src/lib/auth";
 import {
   DUPLICATE_SPLIT_MUTATION,
   MY_SPLITS_QUERY,
+  UPDATE_SPLIT_MUTATION,
   type Split,
 } from "../../src/lib/graphql";
 
 export default function SplitsScreen() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
   const [splits, setSplits] = useState<Split[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const loadSplits = useCallback(async () => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSplits([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const client = await createAuthenticatedClient(getToken);
+      const client = await createAuthenticatedClient(getTokenRef.current);
       const data = await client.request<{ mySplits: Split[] }>(MY_SPLITS_QUERY);
       setSplits(data.mySplits);
     } catch (err) {
@@ -45,7 +56,7 @@ export default function SplitsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [isLoaded, isSignedIn]);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,7 +68,7 @@ export default function SplitsScreen() {
     setDuplicatingId(id);
 
     try {
-      const client = await createAuthenticatedClient(getToken);
+      const client = await createAuthenticatedClient(getTokenRef.current);
       await client.request(DUPLICATE_SPLIT_MUTATION, { id });
       await loadSplits();
       Alert.alert("Duplicated", "A draft copy of this split was created.");
@@ -68,6 +79,36 @@ export default function SplitsScreen() {
       );
     } finally {
       setDuplicatingId(null);
+    }
+  };
+
+  const publishSplit = async (split: Split) => {
+    setPublishingId(split.id);
+
+    try {
+      const client = await createAuthenticatedClient(getTokenRef.current);
+      await client.request(UPDATE_SPLIT_MUTATION, {
+        id: split.id,
+        input: {
+          name: split.name,
+          description: split.description ?? undefined,
+          daysPerWeek: split.daysPerWeek,
+          difficulty: split.difficulty,
+          experienceLevel: split.experienceLevel ?? undefined,
+          visibility: split.visibility,
+          status: "PUBLISHED",
+          days: split.days.map((day) => ({ label: day.label })),
+        },
+      });
+      await loadSplits();
+      Alert.alert("Published", "Your split is now published.");
+    } catch (err) {
+      Alert.alert(
+        "Could not publish",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -103,6 +144,13 @@ export default function SplitsScreen() {
           variant="secondary"
           onPress={() => router.push(`/splits/${item.id}`)}
         />
+        {item.status === "DRAFT" ? (
+          <Button
+            label={publishingId === item.id ? "Publishing..." : "Publish"}
+            disabled={publishingId === item.id}
+            onPress={() => void publishSplit(item)}
+          />
+        ) : null}
         <Button
           label={duplicatingId === item.id ? "Duplicating…" : "Duplicate"}
           variant="ghost"

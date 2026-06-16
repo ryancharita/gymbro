@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,7 +31,9 @@ import {
 export default function EditSplitScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
 
   const [split, setSplit] = useState<Split | null>(null);
   const [name, setName] = useState("");
@@ -49,12 +51,18 @@ export default function EditSplitScreen() {
   useEffect(() => {
     const loadSplit = async () => {
       if (!id) return;
+      if (!isLoaded) return;
+      if (!isSignedIn) {
+        setSplit(null);
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       setError(null);
 
       try {
-        const client = await createAuthenticatedClient(getToken);
+        const client = await createAuthenticatedClient(getTokenRef.current);
         const data = await client.request<{ split: Split | null }>(SPLIT_QUERY, {
           id,
         });
@@ -81,7 +89,7 @@ export default function EditSplitScreen() {
     };
 
     void loadSplit();
-  }, [getToken, id]);
+  }, [id, isLoaded, isSignedIn]);
 
   const saveSplit = async () => {
     if (!id) return;
@@ -90,7 +98,7 @@ export default function EditSplitScreen() {
     setError(null);
 
     try {
-      const client = await createAuthenticatedClient(getToken);
+      const client = await createAuthenticatedClient(getTokenRef.current);
 
       await client.request(UPDATE_SPLIT_MUTATION, {
         id,
@@ -127,7 +135,7 @@ export default function EditSplitScreen() {
           setSaving(true);
 
           try {
-            const client = await createAuthenticatedClient(getToken);
+            const client = await createAuthenticatedClient(getTokenRef.current);
             await client.request(DELETE_SPLIT_MUTATION, { id });
             router.replace("/splits");
           } catch (err) {
