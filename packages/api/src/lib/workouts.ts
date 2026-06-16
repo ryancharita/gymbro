@@ -1,4 +1,26 @@
 import { SessionStatus, prisma } from "@ironlink/db";
+import type { WorkoutSet } from "@ironlink/db";
+
+function estimateOneRepMax(weight?: number | null, reps?: number | null): number {
+  if (!weight || !reps || reps <= 0) return 0;
+  return weight * (1 + reps / 30);
+}
+
+function isNewPr(previous: WorkoutSet[], weight?: number | null, reps?: number | null): boolean {
+  if (!weight && !reps) return false;
+  const prevMaxWeight = Math.max(0, ...previous.map((set) => set.weight ?? 0));
+  const prevMaxReps = Math.max(0, ...previous.map((set) => set.reps ?? 0));
+  const prevMaxOneRm = Math.max(
+    0,
+    ...previous.map((set) => estimateOneRepMax(set.weight, set.reps)),
+  );
+
+  return (
+    (weight ?? 0) > prevMaxWeight ||
+    (reps ?? 0) > prevMaxReps ||
+    estimateOneRepMax(weight, reps) > prevMaxOneRm
+  );
+}
 
 export async function startWorkoutSession(userId: string, routineId: string) {
   const routine = await prisma.routine.findFirst({
@@ -87,6 +109,21 @@ export async function logWorkoutSet(
     throw new Error("Session is not active");
   }
 
+  let nextIsPr = set.isPr;
+  const nextCompleted = input.isCompleted ?? set.isCompleted;
+  const nextWeight = input.weight !== undefined ? input.weight : set.weight;
+  const nextReps = input.reps !== undefined ? input.reps : set.reps;
+  if (nextCompleted) {
+    const previous = await prisma.workoutSet.findMany({
+      where: {
+        exerciseId: set.exerciseId,
+        isCompleted: true,
+        session: { userId, status: SessionStatus.COMPLETED },
+      },
+    });
+    nextIsPr = isNewPr(previous, nextWeight, nextReps);
+  }
+
   return prisma.workoutSet.update({
     where: { id: set.id },
     data: {
@@ -95,6 +132,7 @@ export async function logWorkoutSet(
       ...(input.durationSec !== undefined ? { durationSec: input.durationSec } : {}),
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
       ...(input.isCompleted !== undefined ? { isCompleted: input.isCompleted } : {}),
+      isPr: nextIsPr,
     },
     include: { exercise: true },
   });
