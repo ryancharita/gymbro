@@ -108,6 +108,7 @@ export type SplitDay = {
   label: string;
   dayOrder: number;
   routineId: string | null;
+  routine?: { id: string; name: string } | null;
 };
 
 export type Split = {
@@ -120,6 +121,29 @@ export type Split = {
   visibility: string;
   status: string;
   days: SplitDay[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RoutineExercise = {
+  id: string;
+  exerciseId: string;
+  exercise: Exercise;
+  setType: "STRAIGHT" | "SUPERSET" | "DROP_SET" | "AMRAP" | "TIME_BASED";
+  sets: number;
+  repsMin: number | null;
+  repsMax: number | null;
+  weightTarget: number | null;
+  restSeconds: number | null;
+  notes: string | null;
+  sortOrder: number;
+};
+
+export type Routine = {
+  id: string;
+  name: string;
+  notes: string | null;
+  exercises: RoutineExercise[];
   createdAt: string;
   updatedAt: string;
 };
@@ -140,6 +164,36 @@ const SPLIT_FIELDS = `
     label
     dayOrder
     routineId
+    routine {
+      id
+      name
+    }
+  }
+`;
+
+const ROUTINE_FIELDS = `
+  id
+  name
+  notes
+  createdAt
+  updatedAt
+  exercises {
+    id
+    exerciseId
+    setType
+    sets
+    repsMin
+    repsMax
+    weightTarget
+    restSeconds
+    notes
+    sortOrder
+    exercise {
+      id
+      name
+      primaryMuscles
+      equipment
+    }
   }
 `;
 
@@ -238,6 +292,53 @@ export const DUPLICATE_SPLIT_MUTATION = `
   mutation DuplicateSplit($id: ID!) {
     duplicateSplit(id: $id) {
       ${SPLIT_FIELDS}
+    }
+  }
+`;
+
+export const MY_ROUTINES_QUERY = `
+  query MyRoutines {
+    myRoutines {
+      ${ROUTINE_FIELDS}
+    }
+  }
+`;
+
+export const ROUTINE_QUERY = `
+  query Routine($id: ID!) {
+    routine(id: $id) {
+      ${ROUTINE_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_ROUTINE_MUTATION = `
+  mutation CreateRoutine($input: CreateRoutineInput!) {
+    createRoutine(input: $input) {
+      ${ROUTINE_FIELDS}
+    }
+  }
+`;
+
+export const UPDATE_ROUTINE_MUTATION = `
+  mutation UpdateRoutine($id: ID!, $input: UpdateRoutineInput!) {
+    updateRoutine(id: $id, input: $input) {
+      ${ROUTINE_FIELDS}
+    }
+  }
+`;
+
+export const DELETE_ROUTINE_MUTATION = `
+  mutation DeleteRoutine($id: ID!) {
+    deleteRoutine(id: $id)
+  }
+`;
+
+export const ASSIGN_ROUTINE_TO_SPLIT_DAY_MUTATION = `
+  mutation AssignRoutineToSplitDay($splitDayId: ID!, $routineId: ID) {
+    assignRoutineToSplitDay(splitDayId: $splitDayId, routineId: $routineId) {
+      id
+      routineId
     }
   }
 `;

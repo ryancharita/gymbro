@@ -9,6 +9,13 @@ import {
   getOwnedSplit,
   updateSplit,
 } from "../lib/splits.js";
+import {
+  assignRoutineToSplitDay,
+  createRoutine,
+  deleteRoutine,
+  getOwnedRoutine,
+  updateRoutine,
+} from "../lib/routines.js";
 
 type ExerciseWhereInput = Prisma.ExerciseWhereInput;
 
@@ -147,6 +154,29 @@ export const resolvers = {
       const user = requireAuth(getContext(context));
       return getOwnedSplit(user.id, args.id);
     },
+
+    myRoutines: async (_parent: unknown, _args: unknown, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      return prisma.routine.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          exercises: {
+            orderBy: { sortOrder: "asc" },
+            include: { exercise: true },
+          },
+        },
+      });
+    },
+
+    routine: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return getOwnedRoutine(user.id, args.id);
+    },
   },
 
   Split: {
@@ -160,6 +190,17 @@ export const resolvers = {
         orderBy: { dayOrder: "asc" },
       });
     },
+  },
+
+  SplitDay: {
+    routine: async (parent: { routineId?: string | null }) => {
+      if (!parent.routineId) return null;
+      return prisma.routine.findUnique({ where: { id: parent.routineId } });
+    },
+  },
+
+  RoutineExercise: {
+    exerciseId: (parent: { exerciseId: string }) => parent.exerciseId,
   },
 
   Mutation: {
@@ -420,6 +461,73 @@ export const resolvers = {
     ) => {
       const user = requireAuth(getContext(context));
       return duplicateSplit(user.id, args.id);
+    },
+
+    createRoutine: async (
+      _parent: unknown,
+      args: {
+        input: {
+          name: string;
+          notes?: string;
+          exercises: Array<{
+            exerciseId: string;
+            setType: "STRAIGHT" | "SUPERSET" | "DROP_SET" | "AMRAP" | "TIME_BASED";
+            sets: number;
+            repsMin?: number;
+            repsMax?: number;
+            weightTarget?: number;
+            restSeconds?: number;
+            notes?: string;
+          }>;
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return createRoutine(user.id, args.input);
+    },
+
+    updateRoutine: async (
+      _parent: unknown,
+      args: {
+        id: string;
+        input: {
+          name?: string;
+          notes?: string;
+          exercises?: Array<{
+            exerciseId: string;
+            setType: "STRAIGHT" | "SUPERSET" | "DROP_SET" | "AMRAP" | "TIME_BASED";
+            sets: number;
+            repsMin?: number;
+            repsMax?: number;
+            weightTarget?: number;
+            restSeconds?: number;
+            notes?: string;
+          }>;
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return updateRoutine(user.id, args.id, args.input);
+    },
+
+    deleteRoutine: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return deleteRoutine(user.id, args.id);
+    },
+
+    assignRoutineToSplitDay: async (
+      _parent: unknown,
+      args: { splitDayId: string; routineId?: string | null },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return assignRoutineToSplitDay(user.id, args.splitDayId, args.routineId ?? null);
     },
   },
 };
