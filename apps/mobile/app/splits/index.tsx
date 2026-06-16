@@ -165,6 +165,7 @@ export default function SplitsScreen() {
     <ScreenLayout
       title="My splits"
       subtitle="Create training splits, save drafts, and publish when ready."
+      withBottomNav
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
 

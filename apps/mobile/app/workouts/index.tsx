@@ -84,6 +84,7 @@ export default function WorkoutsScreen() {
     <ScreenLayout
       title="Workout logging"
       subtitle="Start from a routine, log completed sets, and track total volume."
+      withBottomNav
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loading ? (
