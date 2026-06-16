@@ -1,0 +1,62 @@
+scalar DateTime
+
+enum SplitDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SplitVisibility {
+  PUBLIC
+  FRIENDS_ONLY
+  PRIVATE
+}
+
+enum SplitStatus {
+  DRAFT
+  PUBLISHED
+}
+
+type User {
+  id: ID!
+  username: String
+  bio: String
+  profilePhotoUrl: String
+  city: String
+  gymName: String
+  onboardingComplete: Boolean!
+  createdAt: DateTime!
+}
+
+type Exercise {
+  id: ID!
+  name: String!
+  primaryMuscles: [String!]!
+  secondaryMuscles: [String!]!
+  equipment: [String!]!
+  movementPattern: String
+  videoUrl: String
+  isCustom: Boolean!
+}
+
+type Split {
+  id: ID!
+  name: String!
+  description: String
+  daysPerWeek: Int!
+  difficulty: SplitDifficulty!
+  visibility: SplitVisibility!
+  status: SplitStatus!
+  createdAt: DateTime!
+}
+
+type Query {
+  health: String!
+  me: User
+  exercises(search: String, muscleGroup: String, equipment: String, limit: Int = 50, offset: Int = 0): [Exercise!]!
+  mySplits: [Split!]!
+}
+
+type Mutation {
+  _placeholder: Boolean
+}

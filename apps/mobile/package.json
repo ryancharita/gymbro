@@ -20,7 +20,8 @@
     "web": "expo start --web",
     "build": "expo export --platform all --output-dir dist",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"No lint configured for mobile\""
+    "lint": "echo \"No lint configured for mobile\"",
+    "test": "echo \"No tests configured for mobile\""
   },
   "private": true
 }
