@@ -28,6 +28,7 @@ export default function HomeScreen() {
       <Button label="Exercise library" onPress={() => router.push("/exercises")} />
       <Button label="My splits" onPress={() => router.push("/splits")} />
       <Button label="Routines" onPress={() => router.push("/routines")} />
+      <Button label="Workout logging" onPress={() => router.push("/workouts")} />
       <Button label="Account settings" onPress={() => router.push("/settings")} />
       <Button
         label="Sign out"

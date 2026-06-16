@@ -16,6 +16,13 @@ import {
   getOwnedRoutine,
   updateRoutine,
 } from "../lib/routines.js";
+import {
+  abandonWorkoutSession,
+  completeWorkoutSession,
+  getOwnedWorkoutSession,
+  logWorkoutSet,
+  startWorkoutSession,
+} from "../lib/workouts.js";
 
 type ExerciseWhereInput = Prisma.ExerciseWhereInput;
 
@@ -177,6 +184,51 @@ export const resolvers = {
       const user = requireAuth(getContext(context));
       return getOwnedRoutine(user.id, args.id);
     },
+
+    myWorkoutSessions: async (
+      _parent: unknown,
+      args: { limit?: number; offset?: number },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return prisma.workoutSession.findMany({
+        where: { userId: user.id },
+        orderBy: { startedAt: "desc" },
+        take: args.limit ?? 20,
+        skip: args.offset ?? 0,
+        include: {
+          routine: true,
+          sets: { include: { exercise: true } },
+        },
+      });
+    },
+
+    workoutSession: async (
+      _parent: unknown,
+      args: { id: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return getOwnedWorkoutSession(user.id, args.id);
+    },
+
+    activeWorkoutSession: async (
+      _parent: unknown,
+      _args: unknown,
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return prisma.workoutSession.findFirst({
+        where: { userId: user.id, status: "IN_PROGRESS" },
+        include: {
+          routine: true,
+          sets: {
+            orderBy: [{ exerciseId: "asc" }, { setNumber: "asc" }],
+            include: { exercise: true },
+          },
+        },
+      });
+    },
   },
 
   Split: {
@@ -201,6 +253,18 @@ export const resolvers = {
 
   RoutineExercise: {
     exerciseId: (parent: { exerciseId: string }) => parent.exerciseId,
+  },
+
+  WorkoutSession: {
+    durationSeconds: (parent: { startedAt: Date; completedAt?: Date | null }) => {
+      const end = parent.completedAt ?? new Date();
+      return Math.max(0, Math.floor((end.getTime() - parent.startedAt.getTime()) / 1000));
+    },
+    totalVolumeKg: (parent: { sets?: Array<{ weight?: number | null; reps?: number | null }> }) =>
+      (parent.sets ?? []).reduce(
+        (total, set) => total + (set.weight ?? 0) * (set.reps ?? 0),
+        0,
+      ),
   },
 
   Mutation: {
@@ -528,6 +592,51 @@ export const resolvers = {
     ) => {
       const user = requireAuth(getContext(context));
       return assignRoutineToSplitDay(user.id, args.splitDayId, args.routineId ?? null);
+    },
+
+    startWorkoutSession: async (
+      _parent: unknown,
+      args: { routineId: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return startWorkoutSession(user.id, args.routineId);
+    },
+
+    logWorkoutSet: async (
+      _parent: unknown,
+      args: {
+        input: {
+          setId: string;
+          weight?: number | null;
+          reps?: number | null;
+          durationSec?: number | null;
+          notes?: string | null;
+          isCompleted?: boolean;
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return logWorkoutSet(user.id, args.input);
+    },
+
+    completeWorkoutSession: async (
+      _parent: unknown,
+      args: { id: string; notes?: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return completeWorkoutSession(user.id, args.id, args.notes);
+    },
+
+    abandonWorkoutSession: async (
+      _parent: unknown,
+      args: { id: string; notes?: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return abandonWorkoutSession(user.id, args.id, args.notes);
     },
   },
 };

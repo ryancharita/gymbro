@@ -148,6 +148,33 @@ export type Routine = {
   updatedAt: string;
 };
 
+export type WorkoutSet = {
+  id: string;
+  exerciseId: string;
+  exercise: Exercise;
+  setNumber: number;
+  setType: "STRAIGHT" | "SUPERSET" | "DROP_SET" | "AMRAP" | "TIME_BASED";
+  weight: number | null;
+  reps: number | null;
+  durationSec: number | null;
+  notes: string | null;
+  isCompleted: boolean;
+  createdAt: string;
+};
+
+export type WorkoutSession = {
+  id: string;
+  routineId: string | null;
+  routine: Routine | null;
+  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+  startedAt: string;
+  completedAt: string | null;
+  notes: string | null;
+  durationSeconds: number;
+  totalVolumeKg: number;
+  sets: WorkoutSet[];
+};
+
 const SPLIT_FIELDS = `
   id
   name
@@ -193,6 +220,38 @@ const ROUTINE_FIELDS = `
       name
       primaryMuscles
       equipment
+    }
+  }
+`;
+
+const WORKOUT_SESSION_FIELDS = `
+  id
+  routineId
+  status
+  startedAt
+  completedAt
+  notes
+  durationSeconds
+  totalVolumeKg
+  routine {
+    id
+    name
+  }
+  sets {
+    id
+    exerciseId
+    setNumber
+    setType
+    weight
+    reps
+    durationSec
+    notes
+    isCompleted
+    createdAt
+    exercise {
+      id
+      name
+      primaryMuscles
     }
   }
 `;
@@ -339,6 +398,73 @@ export const ASSIGN_ROUTINE_TO_SPLIT_DAY_MUTATION = `
     assignRoutineToSplitDay(splitDayId: $splitDayId, routineId: $routineId) {
       id
       routineId
+    }
+  }
+`;
+
+export const MY_WORKOUT_SESSIONS_QUERY = `
+  query MyWorkoutSessions($limit: Int, $offset: Int) {
+    myWorkoutSessions(limit: $limit, offset: $offset) {
+      ${WORKOUT_SESSION_FIELDS}
+    }
+  }
+`;
+
+export const WORKOUT_SESSION_QUERY = `
+  query WorkoutSession($id: ID!) {
+    workoutSession(id: $id) {
+      ${WORKOUT_SESSION_FIELDS}
+    }
+  }
+`;
+
+export const ACTIVE_WORKOUT_SESSION_QUERY = `
+  query ActiveWorkoutSession {
+    activeWorkoutSession {
+      ${WORKOUT_SESSION_FIELDS}
+    }
+  }
+`;
+
+export const START_WORKOUT_SESSION_MUTATION = `
+  mutation StartWorkoutSession($routineId: ID!) {
+    startWorkoutSession(routineId: $routineId) {
+      ${WORKOUT_SESSION_FIELDS}
+    }
+  }
+`;
+
+export const LOG_WORKOUT_SET_MUTATION = `
+  mutation LogWorkoutSet($input: LogWorkoutSetInput!) {
+    logWorkoutSet(input: $input) {
+      id
+      weight
+      reps
+      durationSec
+      notes
+      isCompleted
+    }
+  }
+`;
+
+export const COMPLETE_WORKOUT_SESSION_MUTATION = `
+  mutation CompleteWorkoutSession($id: ID!, $notes: String) {
+    completeWorkoutSession(id: $id, notes: $notes) {
+      id
+      status
+      completedAt
+      totalVolumeKg
+      durationSeconds
+    }
+  }
+`;
+
+export const ABANDON_WORKOUT_SESSION_MUTATION = `
+  mutation AbandonWorkoutSession($id: ID!, $notes: String) {
+    abandonWorkoutSession(id: $id, notes: $notes) {
+      id
+      status
+      completedAt
     }
   }
 `;
