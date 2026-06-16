@@ -51,6 +51,23 @@ type User {
   createdAt: DateTime!
 }
 
+type UserStats {
+  totalWorkouts: Int!
+  followersCount: Int!
+  followingCount: Int!
+  currentStreakDays: Int!
+}
+
+type UserProfile {
+  user: User!
+  stats: UserStats!
+  sharedSplits: [Split!]!
+  sharedRoutines: [Routine!]!
+  progressPosts: [Post!]!
+  isFollowing: Boolean!
+  isRequested: Boolean!
+}
+
 type Exercise {
   id: ID!
   name: String!
@@ -151,6 +168,31 @@ type WorkoutSet {
   createdAt: DateTime!
 }
 
+type Post {
+  id: ID!
+  userId: ID!
+  user: User!
+  content: String!
+  imageUrl: String
+  splitId: ID
+  routineId: ID
+  workoutSessionId: ID
+  likeCount: Int!
+  commentCount: Int!
+  viewerHasLiked: Boolean!
+  comments: [PostComment!]!
+  createdAt: DateTime!
+}
+
+type PostComment {
+  id: ID!
+  postId: ID!
+  userId: ID!
+  user: User!
+  content: String!
+  createdAt: DateTime!
+}
+
 enum ProgressPeriod {
   WEEKLY
   MONTHLY
@@ -244,6 +286,14 @@ input LogWorkoutSetInput {
   isCompleted: Boolean
 }
 
+input CreatePostInput {
+  content: String!
+  imageUrl: String
+  splitId: ID
+  routineId: ID
+  workoutSessionId: ID
+}
+
 input CompleteOnboardingInput {
   username: String!
   bio: String
@@ -286,6 +336,10 @@ type Query {
   activeWorkoutSession: WorkoutSession
   progressOverview(period: ProgressPeriod = WEEKLY): ProgressOverview!
   exerciseProgress(exerciseId: ID!, limit: Int = 30): ExerciseProgressHistory!
+  profile(userId: ID!): UserProfile
+  myFollowers: [User!]!
+  myFollowing: [User!]!
+  homeFeed(limit: Int = 30, offset: Int = 0): [Post!]!
 }
 
 type Mutation {
@@ -306,4 +360,10 @@ type Mutation {
   logWorkoutSet(input: LogWorkoutSetInput!): WorkoutSet!
   completeWorkoutSession(id: ID!, notes: String): WorkoutSession!
   abandonWorkoutSession(id: ID!, notes: String): WorkoutSession!
+  followUser(userId: ID!): Boolean!
+  unfollowUser(userId: ID!): Boolean!
+  createPost(input: CreatePostInput!): Post!
+  likePost(postId: ID!): Boolean!
+  unlikePost(postId: ID!): Boolean!
+  addPostComment(postId: ID!, content: String!): PostComment!
 }

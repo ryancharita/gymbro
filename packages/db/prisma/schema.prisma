@@ -86,6 +86,8 @@ model User {
   followers       Follow[]       @relation("Following")
   following       Follow[]       @relation("Follower")
   posts           Post[]
+  postLikes       PostLike[]
+  postComments    PostComment[]
 
   @@index([clerkId])
   @@map("users")
@@ -227,7 +229,8 @@ model WorkoutSet {
 model Follow {
   id          String   @id @default(cuid())
   followerId  String   @map("follower_id")
-  followingId String @map("following_id")
+  followingId String   @map("following_id")
+  acceptedAt  DateTime? @map("accepted_at")
   createdAt   DateTime @default(now()) @map("created_at")
 
   follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
@@ -243,11 +246,45 @@ model Post {
   content   String
   imageUrl  String?  @map("image_url")
   splitId   String?  @map("split_id")
+  routineId String?  @map("routine_id")
+  workoutSessionId String? @map("workout_session_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes PostLike[]
+  comments PostComment[]
 
   @@index([userId, createdAt])
   @@map("posts")
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("post_comments")
 }

@@ -30,6 +30,8 @@ export default function HomeScreen() {
       <Button label="Routines" onPress={() => router.push("/routines")} />
       <Button label="Workout logging" onPress={() => router.push("/workouts")} />
       <Button label="Progress history" onPress={() => router.push("/progress")} />
+      <Button label="Home feed" onPress={() => router.push("/feed")} />
+      {user?.id ? <Button label="My profile" onPress={() => router.push(`/profile/${user.id}`)} /> : null}
       <Button label="Account settings" onPress={() => router.push("/settings")} />
       <Button
         label="Sign out"

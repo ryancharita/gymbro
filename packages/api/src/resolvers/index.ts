@@ -248,6 +248,101 @@ export const resolvers = {
       const user = requireAuth(getContext(context));
       return getExerciseProgress(user.id, args.exerciseId, args.limit ?? 30);
     },
+
+    profile: async (
+      _parent: unknown,
+      args: { userId: string },
+      context: unknown,
+    ) => {
+      const ctx = getContext(context);
+      const viewer = requireAuth(ctx);
+      const user = await prisma.user.findUnique({ where: { id: args.userId } });
+      if (!user) return null;
+
+      const [totalWorkouts, followersCount, followingCount, isFollowing, isRequested, sharedSplits, sharedRoutines, progressPosts] =
+        await Promise.all([
+          prisma.workoutSession.count({
+            where: { userId: user.id, status: "COMPLETED" },
+          }),
+          prisma.follow.count({ where: { followingId: user.id } }),
+          prisma.follow.count({ where: { followerId: user.id } }),
+          prisma.follow.findUnique({
+            where: { followerId_followingId: { followerId: viewer.id, followingId: user.id } },
+          }),
+          prisma.follow.findFirst({
+            where: { followerId: viewer.id, followingId: user.id, acceptedAt: null },
+          }),
+          prisma.split.findMany({
+            where: { userId: user.id, visibility: "PUBLIC", status: "PUBLISHED" },
+            orderBy: { updatedAt: "desc" },
+            include: { days: { orderBy: { dayOrder: "asc" } } },
+          }),
+          prisma.routine.findMany({
+            where: { userId: user.id },
+            orderBy: { updatedAt: "desc" },
+            include: { exercises: { orderBy: { sortOrder: "asc" }, include: { exercise: true } } },
+          }),
+          prisma.post.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" },
+            include: { comments: { include: { user: true }, take: 5, orderBy: { createdAt: "asc" } } },
+          }),
+        ]);
+
+      return {
+        user,
+        stats: {
+          totalWorkouts,
+          followersCount,
+          followingCount,
+          currentStreakDays: 0,
+        },
+        sharedSplits,
+        sharedRoutines,
+        progressPosts,
+        isFollowing: !!isFollowing?.acceptedAt,
+        isRequested: !!isRequested,
+      };
+    },
+
+    myFollowers: async (_p: unknown, _a: unknown, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      const follows = await prisma.follow.findMany({
+        where: { followingId: user.id, acceptedAt: { not: null } },
+        include: { follower: true },
+      });
+      return follows.map((f) => f.follower);
+    },
+
+    myFollowing: async (_p: unknown, _a: unknown, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      const follows = await prisma.follow.findMany({
+        where: { followerId: user.id, acceptedAt: { not: null } },
+        include: { following: true },
+      });
+      return follows.map((f) => f.following);
+    },
+
+    homeFeed: async (
+      _p: unknown,
+      args: { limit?: number; offset?: number },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      const following = await prisma.follow.findMany({
+        where: { followerId: user.id, acceptedAt: { not: null } },
+        select: { followingId: true },
+      });
+      const ids = following.map((f) => f.followingId);
+      if (ids.length === 0) return [];
+      return prisma.post.findMany({
+        where: { userId: { in: ids } },
+        orderBy: { createdAt: "desc" },
+        take: args.limit ?? 30,
+        skip: args.offset ?? 0,
+        include: { comments: { include: { user: true }, take: 5, orderBy: { createdAt: "asc" } } },
+      });
+    },
   },
 
   Split: {
@@ -284,6 +379,33 @@ export const resolvers = {
         (total, set) => total + (set.weight ?? 0) * (set.reps ?? 0),
         0,
       ),
+  },
+
+  Post: {
+    user: async (parent: { userId: string }) =>
+      prisma.user.findUniqueOrThrow({ where: { id: parent.userId } }),
+    likeCount: async (parent: { id: string }) =>
+      prisma.postLike.count({ where: { postId: parent.id } }),
+    commentCount: async (parent: { id: string }) =>
+      prisma.postComment.count({ where: { postId: parent.id } }),
+    viewerHasLiked: async (parent: { id: string }, _args: unknown, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      const like = await prisma.postLike.findUnique({
+        where: { postId_userId: { postId: parent.id, userId: user.id } },
+      });
+      return !!like;
+    },
+    comments: async (parent: { id: string }) =>
+      prisma.postComment.findMany({
+        where: { postId: parent.id },
+        orderBy: { createdAt: "asc" },
+        include: { user: true },
+      }),
+  },
+
+  PostComment: {
+    user: async (parent: { userId: string }) =>
+      prisma.user.findUniqueOrThrow({ where: { id: parent.userId } }),
   },
 
   Mutation: {
@@ -656,6 +778,90 @@ export const resolvers = {
     ) => {
       const user = requireAuth(getContext(context));
       return abandonWorkoutSession(user.id, args.id, args.notes);
+    },
+
+    followUser: async (_p: unknown, args: { userId: string }, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      if (user.id === args.userId) return true;
+      const target = await prisma.user.findUnique({ where: { id: args.userId } });
+      if (!target) throw new Error("User not found");
+      await prisma.follow.upsert({
+        where: { followerId_followingId: { followerId: user.id, followingId: args.userId } },
+        update: { acceptedAt: target.isPrivateProfile ? null : new Date() },
+        create: {
+          followerId: user.id,
+          followingId: args.userId,
+          acceptedAt: target.isPrivateProfile ? null : new Date(),
+        },
+      });
+      return true;
+    },
+
+    unfollowUser: async (_p: unknown, args: { userId: string }, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      await prisma.follow.deleteMany({
+        where: { followerId: user.id, followingId: args.userId },
+      });
+      return true;
+    },
+
+    createPost: async (
+      _p: unknown,
+      args: {
+        input: {
+          content: string;
+          imageUrl?: string;
+          splitId?: string;
+          routineId?: string;
+          workoutSessionId?: string;
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      if (!args.input.content.trim()) throw new Error("Post content is required");
+      return prisma.post.create({
+        data: {
+          userId: user.id,
+          content: args.input.content.trim(),
+          imageUrl: args.input.imageUrl ?? null,
+          splitId: args.input.splitId ?? null,
+          routineId: args.input.routineId ?? null,
+          workoutSessionId: args.input.workoutSessionId ?? null,
+        },
+        include: { comments: { include: { user: true } } },
+      });
+    },
+
+    likePost: async (_p: unknown, args: { postId: string }, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      await prisma.postLike.upsert({
+        where: { postId_userId: { postId: args.postId, userId: user.id } },
+        update: {},
+        create: { postId: args.postId, userId: user.id },
+      });
+      return true;
+    },
+
+    unlikePost: async (_p: unknown, args: { postId: string }, context: unknown) => {
+      const user = requireAuth(getContext(context));
+      await prisma.postLike.deleteMany({
+        where: { postId: args.postId, userId: user.id },
+      });
+      return true;
+    },
+
+    addPostComment: async (
+      _p: unknown,
+      args: { postId: string; content: string },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      if (!args.content.trim()) throw new Error("Comment cannot be empty");
+      return prisma.postComment.create({
+        data: { postId: args.postId, userId: user.id, content: args.content.trim() },
+        include: { user: true },
+      });
     },
   },
 };
