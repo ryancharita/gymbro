@@ -17,6 +17,14 @@ enum SplitStatus {
   PUBLISHED
 }
 
+enum SetType {
+  STRAIGHT
+  SUPERSET
+  DROP_SET
+  AMRAP
+  TIME_BASED
+}
+
 type User {
   id: ID!
   username: String
@@ -85,6 +93,29 @@ type SplitDay {
   routineId: ID
 }
 
+type Routine {
+  id: ID!
+  name: String!
+  notes: String
+  exercises: [RoutineExercise!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RoutineExercise {
+  id: ID!
+  exerciseId: ID!
+  exercise: Exercise!
+  setType: SetType!
+  sets: Int!
+  repsMin: Int
+  repsMax: Int
+  weightTarget: Float
+  restSeconds: Int
+  notes: String
+  sortOrder: Int!
+}
+
 input SplitDayInput {
   label: String!
 }
@@ -109,6 +140,29 @@ input UpdateSplitInput {
   visibility: SplitVisibility
   status: SplitStatus
   days: [SplitDayInput!]
+}
+
+input RoutineExerciseInput {
+  exerciseId: ID!
+  setType: SetType!
+  sets: Int!
+  repsMin: Int
+  repsMax: Int
+  weightTarget: Float
+  restSeconds: Int
+  notes: String
+}
+
+input CreateRoutineInput {
+  name: String!
+  notes: String
+  exercises: [RoutineExerciseInput!]!
+}
+
+input UpdateRoutineInput {
+  name: String
+  notes: String
+  exercises: [RoutineExerciseInput!]
 }
 
 input CompleteOnboardingInput {
@@ -146,6 +200,8 @@ type Query {
   exerciseEquipmentOptions: [String!]!
   mySplits: [Split!]!
   split(id: ID!): Split
+  myRoutines: [Routine!]!
+  routine(id: ID!): Routine
 }
 
 type Mutation {
@@ -158,4 +214,8 @@ type Mutation {
   updateSplit(id: ID!, input: UpdateSplitInput!): Split!
   deleteSplit(id: ID!): Boolean!
   duplicateSplit(id: ID!): Split!
+  createRoutine(input: CreateRoutineInput!): Routine!
+  updateRoutine(id: ID!, input: UpdateRoutineInput!): Routine!
+  deleteRoutine(id: ID!): Boolean!
+  assignRoutineToSplitDay(splitDayId: ID!, routineId: ID): SplitDay!
 }

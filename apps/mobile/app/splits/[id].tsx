@@ -235,20 +235,34 @@ export default function EditSplitScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>Training day labels</Text>
-        {dayLabels.map((label, index) => (
-          <FormField
-            key={`day-${index}`}
-            label={`Day ${index + 1}`}
-            value={label}
-            onChangeText={(value) =>
-              setDayLabels((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index ? value : item,
-                ),
-              )
-            }
-          />
-        ))}
+        {dayLabels.map((label, index) => {
+          const splitDay = split.days[index];
+          return (
+            <View key={`day-${index}`}>
+              <FormField
+                label={`Day ${index + 1}`}
+                value={label}
+                onChangeText={(value) =>
+                  setDayLabels((current) =>
+                    current.map((item, itemIndex) =>
+                      itemIndex === index ? value : item,
+                    ),
+                  )
+                }
+              />
+              <Button
+                label={splitDay?.routineId ? "Change routine" : "Assign routine"}
+                variant="ghost"
+                onPress={() =>
+                  router.push({
+                    pathname: "/routines",
+                    params: { splitDayId: splitDay?.id },
+                  })
+                }
+              />
+            </View>
+          );
+        })}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
