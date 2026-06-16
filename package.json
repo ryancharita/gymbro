@@ -1,5 +1,5 @@
 {
-  "name": "start-up",
+  "name": "ironlink",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -11,8 +11,14 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "test": "turbo test",
     "dev:mobile": "npm run dev -w mobile",
-    "dev:api": "npm run dev -w api"
+    "dev:api": "npm run dev -w @ironlink/api",
+    "db:generate": "npm run db:generate -w @ironlink/db",
+    "db:migrate": "npm run db:migrate -w @ironlink/db",
+    "db:push": "npm run db:push -w @ironlink/db",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "devDependencies": {
     "turbo": "^2.0.12"

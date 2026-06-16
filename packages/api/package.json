@@ -1,0 +1,31 @@
+{
+  "name": "@ironlink/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"No lint configured for api\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.21.6",
+    "@fastify/cors": "^10.0.2",
+    "@ironlink/db": "*",
+    "@ironlink/shared": "*",
+    "fastify": "^4.28.1",
+    "graphql": "^16.10.0",
+    "ioredis": "^5.4.2",
+    "mercurius": "^15.1.0",
+    "svix": "^1.45.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}
