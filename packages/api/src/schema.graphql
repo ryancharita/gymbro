@@ -147,7 +147,43 @@ type WorkoutSet {
   durationSec: Int
   notes: String
   isCompleted: Boolean!
+  isPr: Boolean!
   createdAt: DateTime!
+}
+
+enum ProgressPeriod {
+  WEEKLY
+  MONTHLY
+}
+
+type VolumeTrendPoint {
+  date: String!
+  value: Float!
+}
+
+type MuscleGroupVolumePoint {
+  muscleGroup: String!
+  value: Float!
+}
+
+type ProgressOverview {
+  sessionVolumeTrend: [VolumeTrendPoint!]!
+  muscleGroupVolumeTrend: [MuscleGroupVolumePoint!]!
+  totalSessions: Int!
+  totalPrs: Int!
+}
+
+type ExerciseProgressPoint {
+  date: String!
+  weight: Float
+  reps: Int
+  oneRepMaxEstimate: Float!
+  isPr: Boolean!
+}
+
+type ExerciseProgressHistory {
+  exerciseId: ID!
+  points: [ExerciseProgressPoint!]!
 }
 
 input SplitDayInput {
@@ -248,6 +284,8 @@ type Query {
   myWorkoutSessions(limit: Int = 20, offset: Int = 0): [WorkoutSession!]!
   workoutSession(id: ID!): WorkoutSession
   activeWorkoutSession: WorkoutSession
+  progressOverview(period: ProgressPeriod = WEEKLY): ProgressOverview!
+  exerciseProgress(exerciseId: ID!, limit: Int = 30): ExerciseProgressHistory!
 }
 
 type Mutation {

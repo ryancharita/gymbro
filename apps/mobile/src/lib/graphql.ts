@@ -159,6 +159,7 @@ export type WorkoutSet = {
   durationSec: number | null;
   notes: string | null;
   isCompleted: boolean;
+  isPr: boolean;
   createdAt: string;
 };
 
@@ -173,6 +174,31 @@ export type WorkoutSession = {
   durationSeconds: number;
   totalVolumeKg: number;
   sets: WorkoutSet[];
+};
+
+export type VolumeTrendPoint = {
+  date: string;
+  value: number;
+};
+
+export type MuscleGroupVolumePoint = {
+  muscleGroup: string;
+  value: number;
+};
+
+export type ProgressOverview = {
+  sessionVolumeTrend: VolumeTrendPoint[];
+  muscleGroupVolumeTrend: MuscleGroupVolumePoint[];
+  totalSessions: number;
+  totalPrs: number;
+};
+
+export type ExerciseProgressPoint = {
+  date: string;
+  weight: number | null;
+  reps: number | null;
+  oneRepMaxEstimate: number;
+  isPr: boolean;
 };
 
 const SPLIT_FIELDS = `
@@ -247,6 +273,7 @@ const WORKOUT_SESSION_FIELDS = `
     durationSec
     notes
     isCompleted
+    isPr
     createdAt
     exercise {
       id
@@ -465,6 +492,38 @@ export const ABANDON_WORKOUT_SESSION_MUTATION = `
       id
       status
       completedAt
+    }
+  }
+`;
+
+export const PROGRESS_OVERVIEW_QUERY = `
+  query ProgressOverview($period: ProgressPeriod) {
+    progressOverview(period: $period) {
+      totalSessions
+      totalPrs
+      sessionVolumeTrend {
+        date
+        value
+      }
+      muscleGroupVolumeTrend {
+        muscleGroup
+        value
+      }
+    }
+  }
+`;
+
+export const EXERCISE_PROGRESS_QUERY = `
+  query ExerciseProgress($exerciseId: ID!, $limit: Int) {
+    exerciseProgress(exerciseId: $exerciseId, limit: $limit) {
+      exerciseId
+      points {
+        date
+        weight
+        reps
+        oneRepMaxEstimate
+        isPr
+      }
     }
   }
 `;

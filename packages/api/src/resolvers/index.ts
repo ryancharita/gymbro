@@ -23,6 +23,7 @@ import {
   logWorkoutSet,
   startWorkoutSession,
 } from "../lib/workouts.js";
+import { getExerciseProgress, getProgressOverview } from "../lib/progress.js";
 
 type ExerciseWhereInput = Prisma.ExerciseWhereInput;
 
@@ -228,6 +229,24 @@ export const resolvers = {
           },
         },
       });
+    },
+
+    progressOverview: async (
+      _parent: unknown,
+      args: { period?: "WEEKLY" | "MONTHLY" },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return getProgressOverview(user.id, args.period ?? "WEEKLY");
+    },
+
+    exerciseProgress: async (
+      _parent: unknown,
+      args: { exerciseId: string; limit?: number },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      return getExerciseProgress(user.id, args.exerciseId, args.limit ?? 30);
     },
   },
 
