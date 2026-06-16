@@ -25,7 +25,9 @@ export default function HomeScreen() {
         ) : null}
       </View>
 
+      <Button label="My splits" onPress={() => router.push("/splits")} />
       <Button label="Exercise library" onPress={() => router.push("/exercises")} />
+      <Button label="My splits" onPress={() => router.push("/splits")} />
       <Button label="Account settings" onPress={() => router.push("/settings")} />
       <Button
         label="Sign out"
