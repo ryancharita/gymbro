@@ -40,12 +40,28 @@ type User {
 type Exercise {
   id: ID!
   name: String!
+  description: String
   primaryMuscles: [String!]!
   secondaryMuscles: [String!]!
   equipment: [String!]!
   movementPattern: String
   videoUrl: String
   isCustom: Boolean!
+}
+
+type ExercisePage {
+  items: [Exercise!]!
+  totalCount: Int!
+}
+
+input CreateCustomExerciseInput {
+  name: String!
+  description: String
+  primaryMuscles: [String!]!
+  secondaryMuscles: [String!]!
+  equipment: [String!]!
+  movementPattern: String
+  videoUrl: String
 }
 
 type Split {
@@ -90,7 +106,8 @@ type Query {
   health: String!
   me: User
   isUsernameAvailable(username: String!): Boolean!
-  exercises(search: String, muscleGroup: String, equipment: String, limit: Int = 50, offset: Int = 0): [Exercise!]!
+  exercises(search: String, muscleGroup: String, equipment: String, limit: Int = 50, offset: Int = 0): ExercisePage!
+  exerciseEquipmentOptions: [String!]!
   mySplits: [Split!]!
 }
 
@@ -99,4 +116,5 @@ type Mutation {
   updateProfile(input: UpdateProfileInput!): User!
   updatePreferences(input: UpdatePreferencesInput!): User!
   deleteAccount: Boolean!
+  createCustomExercise(input: CreateCustomExerciseInput!): Exercise!
 }

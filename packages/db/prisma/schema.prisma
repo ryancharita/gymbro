@@ -145,6 +145,7 @@ model Routine {
 model Exercise {
   id              String        @id @default(cuid())
   name            String
+  description     String?
   primaryMuscles  MuscleGroup[] @map("primary_muscles")
   secondaryMuscles MuscleGroup[] @map("secondary_muscles")
   equipment       String[]

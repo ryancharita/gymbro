@@ -17,6 +17,7 @@
     "db:generate": "npm run db:generate -w @ironlink/db",
     "db:migrate": "npm run db:migrate -w @ironlink/db",
     "db:push": "npm run db:push -w @ironlink/db",
+    "db:seed": "npm run db:seed -w @ironlink/db",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
