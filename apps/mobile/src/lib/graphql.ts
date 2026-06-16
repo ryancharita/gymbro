@@ -18,6 +18,13 @@ export type AppUser = {
   createdAt: string;
 };
 
+export type UserStats = {
+  totalWorkouts: number;
+  followersCount: number;
+  followingCount: number;
+  currentStreakDays: number;
+};
+
 export const ME_QUERY = `
   query Me {
     me {
@@ -174,6 +181,31 @@ export type WorkoutSession = {
   durationSeconds: number;
   totalVolumeKg: number;
   sets: WorkoutSet[];
+};
+
+export type PostComment = {
+  id: string;
+  postId: string;
+  userId: string;
+  user: AppUser;
+  content: string;
+  createdAt: string;
+};
+
+export type FeedPost = {
+  id: string;
+  userId: string;
+  user: AppUser;
+  content: string;
+  imageUrl: string | null;
+  splitId: string | null;
+  routineId: string | null;
+  workoutSessionId: string | null;
+  likeCount: number;
+  commentCount: number;
+  viewerHasLiked: boolean;
+  comments: PostComment[];
+  createdAt: string;
 };
 
 export type VolumeTrendPoint = {
@@ -496,6 +528,39 @@ export const ABANDON_WORKOUT_SESSION_MUTATION = `
   }
 `;
 
+const FEED_POST_FIELDS = `
+  id
+  userId
+  content
+  imageUrl
+  splitId
+  routineId
+  workoutSessionId
+  likeCount
+  commentCount
+  viewerHasLiked
+  createdAt
+  user {
+    id
+    username
+    profilePhotoUrl
+    city
+    gymName
+  }
+  comments {
+    id
+    postId
+    userId
+    content
+    createdAt
+    user {
+      id
+      username
+      profilePhotoUrl
+    }
+  }
+`;
+
 export const PROGRESS_OVERVIEW_QUERY = `
   query ProgressOverview($period: ProgressPeriod) {
     progressOverview(period: $period) {
@@ -525,5 +590,88 @@ export const EXERCISE_PROGRESS_QUERY = `
         isPr
       }
     }
+  }
+`;
+
+export const PROFILE_QUERY = `
+  query Profile($userId: ID!) {
+    profile(userId: $userId) {
+      user {
+        id
+        username
+        bio
+        profilePhotoUrl
+        city
+        gymName
+      }
+      stats {
+        totalWorkouts
+        followersCount
+        followingCount
+        currentStreakDays
+      }
+      isFollowing
+      isRequested
+      sharedSplits {
+        id
+        name
+        status
+      }
+      sharedRoutines {
+        id
+        name
+      }
+      progressPosts {
+        ${FEED_POST_FIELDS}
+      }
+    }
+  }
+`;
+
+export const HOME_FEED_QUERY = `
+  query HomeFeed($limit: Int, $offset: Int) {
+    homeFeed(limit: $limit, offset: $offset) {
+      ${FEED_POST_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_POST_MUTATION = `
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
+      ${FEED_POST_FIELDS}
+    }
+  }
+`;
+
+export const LIKE_POST_MUTATION = `
+  mutation LikePost($postId: ID!) {
+    likePost(postId: $postId)
+  }
+`;
+
+export const UNLIKE_POST_MUTATION = `
+  mutation UnlikePost($postId: ID!) {
+    unlikePost(postId: $postId)
+  }
+`;
+
+export const ADD_POST_COMMENT_MUTATION = `
+  mutation AddPostComment($postId: ID!, $content: String!) {
+    addPostComment(postId: $postId, content: $content) {
+      id
+    }
+  }
+`;
+
+export const FOLLOW_USER_MUTATION = `
+  mutation FollowUser($userId: ID!) {
+    followUser(userId: $userId)
+  }
+`;
+
+export const UNFOLLOW_USER_MUTATION = `
+  mutation UnfollowUser($userId: ID!) {
+    unfollowUser(userId: $userId)
   }
 `;
