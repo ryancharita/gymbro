@@ -1,0 +1,6 @@
+node_modules
+.turbo
+dist
+.expo
+npm-debug.log*
+.DS_Store
