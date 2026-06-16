@@ -10,6 +10,46 @@ function getContext(context: unknown): GraphQLContext {
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
+function parseMuscleGroups(values: string[]): MuscleGroup[] {
+  const parsed = values
+    .map((value) => value.toUpperCase())
+    .filter((value): value is MuscleGroup =>
+      Object.values(MuscleGroup).includes(value as MuscleGroup),
+    );
+
+  return [...new Set(parsed)];
+}
+
+function buildExerciseWhere(
+  args: {
+    search?: string;
+    muscleGroup?: string;
+    equipment?: string;
+  },
+  userId?: string,
+): ExerciseWhereInput {
+  const where: ExerciseWhereInput = {
+    OR: [{ isCustom: false }, ...(userId ? [{ userId }] : [])],
+  };
+
+  if (args.search) {
+    where.name = { contains: args.search, mode: "insensitive" };
+  }
+
+  if (
+    args.muscleGroup &&
+    Object.values(MuscleGroup).includes(args.muscleGroup as MuscleGroup)
+  ) {
+    where.primaryMuscles = { has: args.muscleGroup as MuscleGroup };
+  }
+
+  if (args.equipment) {
+    where.equipment = { has: args.equipment };
+  }
+
+  return where;
+}
+
 function validateUsername(username: string) {
   if (!USERNAME_PATTERN.test(username)) {
     throw new Error(
@@ -51,31 +91,30 @@ export const resolvers = {
       context: unknown,
     ) => {
       const ctx = getContext(context);
-      const where: ExerciseWhereInput = {
-        OR: [{ isCustom: false }, { userId: ctx.user?.id }],
-      };
+      const where = buildExerciseWhere(args, ctx.user?.id);
 
-      if (args.search) {
-        where.name = { contains: args.search, mode: "insensitive" };
-      }
+      const [items, totalCount] = await Promise.all([
+        prisma.exercise.findMany({
+          where,
+          take: args.limit ?? 50,
+          skip: args.offset ?? 0,
+          orderBy: { name: "asc" },
+        }),
+        prisma.exercise.count({ where }),
+      ]);
 
-      if (
-        args.muscleGroup &&
-        Object.values(MuscleGroup).includes(args.muscleGroup as MuscleGroup)
-      ) {
-        where.primaryMuscles = { has: args.muscleGroup as MuscleGroup };
-      }
+      return { items, totalCount };
+    },
 
-      if (args.equipment) {
-        where.equipment = { has: args.equipment };
-      }
+    exerciseEquipmentOptions: async () => {
+      const rows = await prisma.$queryRaw<Array<{ equipment: string }>>`
+        SELECT DISTINCT unnest(equipment) AS equipment
+        FROM exercises
+        WHERE is_custom = false
+        ORDER BY equipment ASC
+      `;
 
-      return prisma.exercise.findMany({
-        where,
-        take: args.limit ?? 50,
-        skip: args.offset ?? 0,
-        orderBy: { name: "asc" },
-      });
+      return rows.map((row) => row.equipment);
     },
 
     mySplits: async (_parent: unknown, _args: unknown, context: unknown) => {
@@ -217,6 +256,56 @@ export const resolvers = {
       await clerk.users.deleteUser(ctx.clerkUserId);
 
       return true;
+    },
+
+    createCustomExercise: async (
+      _parent: unknown,
+      args: {
+        input: {
+          name: string;
+          description?: string;
+          primaryMuscles: string[];
+          secondaryMuscles: string[];
+          equipment: string[];
+          movementPattern?: string;
+          videoUrl?: string;
+        };
+      },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      const name = args.input.name.trim();
+
+      if (!name) {
+        throw new Error("Exercise name is required");
+      }
+
+      const primaryMuscles = parseMuscleGroups(args.input.primaryMuscles);
+      if (primaryMuscles.length === 0) {
+        throw new Error("At least one primary muscle group is required");
+      }
+
+      const equipment = args.input.equipment
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (equipment.length === 0) {
+        throw new Error("At least one equipment type is required");
+      }
+
+      return prisma.exercise.create({
+        data: {
+          name,
+          description: args.input.description?.trim() || null,
+          primaryMuscles,
+          secondaryMuscles: parseMuscleGroups(args.input.secondaryMuscles),
+          equipment,
+          movementPattern: args.input.movementPattern?.trim() || null,
+          videoUrl: args.input.videoUrl?.trim() || null,
+          isCustom: true,
+          userId: user.id,
+        },
+      });
     },
   },
 };

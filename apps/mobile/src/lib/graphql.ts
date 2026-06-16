@@ -90,3 +90,68 @@ export const DELETE_ACCOUNT_MUTATION = `
     deleteAccount
   }
 `;
+
+export type Exercise = {
+  id: string;
+  name: string;
+  description: string | null;
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  equipment: string[];
+  movementPattern: string | null;
+  videoUrl: string | null;
+  isCustom: boolean;
+};
+
+export const EXERCISES_QUERY = `
+  query Exercises(
+    $search: String
+    $muscleGroup: String
+    $equipment: String
+    $limit: Int
+    $offset: Int
+  ) {
+    exercises(
+      search: $search
+      muscleGroup: $muscleGroup
+      equipment: $equipment
+      limit: $limit
+      offset: $offset
+    ) {
+      totalCount
+      items {
+        id
+        name
+        description
+        primaryMuscles
+        secondaryMuscles
+        equipment
+        movementPattern
+        videoUrl
+        isCustom
+      }
+    }
+  }
+`;
+
+export const EXERCISE_EQUIPMENT_OPTIONS_QUERY = `
+  query ExerciseEquipmentOptions {
+    exerciseEquipmentOptions
+  }
+`;
+
+export const CREATE_CUSTOM_EXERCISE_MUTATION = `
+  mutation CreateCustomExercise($input: CreateCustomExerciseInput!) {
+    createCustomExercise(input: $input) {
+      id
+      name
+      description
+      primaryMuscles
+      secondaryMuscles
+      equipment
+      movementPattern
+      videoUrl
+      isCustom
+    }
+  }
+`;
