@@ -1,15 +1,12 @@
-import { createClerkClient, verifyToken } from "@clerk/backend";
+import { verifyToken } from "@clerk/backend";
 import type { FastifyRequest } from "fastify";
-import { prisma, type User } from "@ironlink/db";
+import type { User } from "@ironlink/db";
+import { ensureUser } from "./lib/user.js";
 
 export type GraphQLContext = {
   user: User | null;
   clerkUserId: string | null;
 };
-
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY ?? "",
-});
 
 export async function buildContext(
   request: FastifyRequest,
@@ -28,10 +25,7 @@ export async function buildContext(
     });
 
     const clerkUserId = payload.sub;
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId: clerkUserId },
-    });
+    const user = await ensureUser(clerkUserId);
 
     return { user, clerkUserId };
   } catch {
@@ -47,4 +41,4 @@ export function requireAuth(context: GraphQLContext): User {
   return context.user;
 }
 
-export { clerk };
+export { clerk } from "./lib/clerk.js";

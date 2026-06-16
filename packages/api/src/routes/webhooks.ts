@@ -2,7 +2,7 @@ import { prisma } from "@ironlink/db";
 import type { FastifyInstance } from "fastify";
 import { Webhook } from "svix";
 import type { WebhookEvent } from "@clerk/backend";
-import { clerk } from "../context.js";
+import { clerk } from "../lib/clerk.js";
 
 type ClerkUserCreatedEvent = {
   type: "user.created";
@@ -103,5 +103,3 @@ export async function registerHealthRoutes(fastify: FastifyInstance) {
     };
   });
 }
-
-export { clerk };
