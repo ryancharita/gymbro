@@ -150,7 +150,7 @@ export default function ExercisesScreen() {
   );
 
   return (
-    <ScreenLayout title="Exercise library" subtitle={subtitle}>
+    <ScreenLayout title="Exercise library" subtitle={subtitle} withBottomNav>
       <TextInput
         value={search}
         onChangeText={setSearch}

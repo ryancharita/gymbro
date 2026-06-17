@@ -126,6 +126,7 @@ Every PR must include the template in `.github/PULL_REQUEST_TEMPLATE.md`.
 * PRs should be **small and focused** — one ticket, one concern
 * Draft PRs are encouraged for early feedback
 * **Do not merge your own PR** unless you are the sole contributor on the project
+* For every completed ticket, you must **create a PR and move the Linear ticket to In Review** in the same handoff step
 
 ---
 

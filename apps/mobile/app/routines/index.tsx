@@ -102,6 +102,7 @@ export default function RoutinesScreen() {
           ? "Choose a routine to assign to this split day."
           : "Build reusable routines with exercises and set details."
       }
+      withBottomNav
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
 

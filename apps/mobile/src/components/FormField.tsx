@@ -1,4 +1,6 @@
 import { StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import { radii, spacing, typography } from "@ironlink/shared";
+import { useThemeColors } from "../lib/theme";
 
 type Props = TextInputProps & {
   label: string;
@@ -6,45 +8,47 @@ type Props = TextInputProps & {
 };
 
 export function FormField({ label, error, style, ...props }: Props) {
+  const colors = useThemeColors();
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       <TextInput
-        placeholderTextColor="#666"
-        style={[styles.input, error ? styles.inputError : null, style]}
+        placeholderTextColor={colors.textMuted}
+        style={[
+          styles.input,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            color: colors.textPrimary,
+          },
+          error ? { borderColor: colors.danger } : null,
+          style,
+        ]}
         {...props}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   label: {
-    color: "#d4d4d4",
-    fontSize: 14,
-    marginBottom: 8,
-    fontWeight: "500",
+    ...typography.label,
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: "#1a1a1a",
     borderWidth: 1,
-    borderColor: "#2a2a2a",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: "#fff",
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#ef4444",
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    ...typography.body,
   },
   error: {
-    color: "#ef4444",
-    fontSize: 13,
-    marginTop: 6,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
 });

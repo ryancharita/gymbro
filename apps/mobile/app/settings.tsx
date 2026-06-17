@@ -151,7 +151,11 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScreenLayout title="Account settings" subtitle="Manage your profile and preferences.">
+    <ScreenLayout
+      title="Account settings"
+      subtitle="Manage your profile and preferences."
+      withBottomNav
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.section}>Profile</Text>
         <FormField label="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />

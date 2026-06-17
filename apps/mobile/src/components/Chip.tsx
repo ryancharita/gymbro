@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text } from "react-native";
+import { radii, spacing, typography } from "@ironlink/shared";
+import { useThemeColors } from "../lib/theme";
 
 type Props = {
   label: string;
@@ -7,16 +9,28 @@ type Props = {
 };
 
 export function Chip({ label, selected = false, onPress }: Props) {
+  const colors = useThemeColors();
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
-        selected ? styles.chipSelected : null,
+        {
+          borderColor: selected ? colors.accent : colors.border,
+          backgroundColor: selected ? colors.accent : colors.surface,
+        },
         pressed ? styles.pressed : null,
       ]}
     >
-      <Text style={[styles.label, selected ? styles.labelSelected : null]}>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: selected ? colors.accentText : colors.textSecondary,
+          },
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -25,28 +39,17 @@ export function Chip({ label, selected = false, onPress }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "#333",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: "#1a1a1a",
-  },
-  chipSelected: {
-    backgroundColor: "#f97316",
-    borderColor: "#f97316",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
   label: {
-    color: "#d4d4d4",
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  labelSelected: {
-    color: "#0f0f0f",
+    ...typography.caption,
   },
 });

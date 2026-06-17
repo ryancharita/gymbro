@@ -2,9 +2,12 @@ import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Button } from "../../src/components/Button";
+import { EmptyState } from "../../src/components/EmptyState";
 import { ScreenLayout } from "../../src/components/ScreenLayout";
 import { createAuthenticatedClient } from "../../src/lib/auth";
+import { useThemeColors } from "../../src/lib/theme";
 import {
   ACTIVE_WORKOUT_SESSION_QUERY,
   MY_SPLITS_QUERY,
@@ -28,6 +31,7 @@ export default function WorkoutsScreen() {
   const [splits, setSplits] = useState<Split[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  const colors = useThemeColors();
 
   const load = useCallback(async () => {
     if (!isLoaded) return;
@@ -84,10 +88,11 @@ export default function WorkoutsScreen() {
     <ScreenLayout
       title="Workout logging"
       subtitle="Start from a routine, log completed sets, and track total volume."
+      withBottomNav
     >
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
       {loading ? (
-        <ActivityIndicator color="#f97316" style={styles.loader} />
+        <ActivityIndicator color={colors.accent} style={styles.loader} />
       ) : (
         <FlatList
           style={styles.list}
@@ -96,26 +101,27 @@ export default function WorkoutsScreen() {
           ListHeaderComponent={
             <>
               {activeSession ? (
-                <View style={styles.activeCard}>
-                  <Text style={styles.activeTitle}>Active session</Text>
-                  <Text style={styles.activeBody}>
+                <View style={[styles.activeCard, { backgroundColor: colors.accent, borderColor: colors.accent }]}>
+                  <Text style={[styles.activeTitle, { color: colors.accentText }]}>Active session</Text>
+                  <Text style={[styles.activeBody, { color: colors.accentText }]}>
                     {activeSession.routine?.name ?? "Workout"} in progress
                   </Text>
                   <Button
                     label="Resume session"
                     onPress={() => router.push(`/workouts/session/${activeSession.id}`)}
+                    variant="secondary"
                   />
                 </View>
               ) : null}
 
-              <Text style={styles.sectionTitle}>Start new session</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Start new session</Text>
 
               {splits.length > 0 ? (
-                <View style={styles.fromSplitCard}>
-                  <Text style={styles.fromSplitTitle}>From your splits</Text>
+                <View style={[styles.fromSplitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.fromSplitTitle, { color: colors.textPrimary }]}>From your splits</Text>
                   {splits.slice(0, 3).map((split) => (
                     <View key={split.id} style={styles.splitBlock}>
-                      <Text style={styles.splitName}>{split.name}</Text>
+                      <Text style={[styles.splitName, { color: colors.textSecondary }]}>{split.name}</Text>
                       {split.days
                         .filter((day) => day.routine?.id)
                         .map((day) => (
@@ -137,14 +143,17 @@ export default function WorkoutsScreen() {
             <>
               <Text style={styles.sectionTitle}>Recent sessions</Text>
               {sessions.length === 0 ? (
-                <Text style={styles.empty}>No sessions logged yet.</Text>
+                <EmptyState title="No sessions logged" subtitle="Start your first workout to build history." icon="◌" />
               ) : (
                 sessions.map((session) => (
-                  <View key={session.id} style={styles.recentCard}>
-                    <Text style={styles.recentName}>
+                  <View
+                    key={session.id}
+                    style={[styles.recentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <Text style={[styles.recentName, { color: colors.textPrimary }]}>
                       {session.routine?.name ?? "Workout"} · {session.status}
                     </Text>
-                    <Text style={styles.recentMeta}>
+                    <Text style={[styles.recentMeta, { color: colors.textSecondary }]}>
                       {Math.round(session.totalVolumeKg)} kg volume ·{" "}
                       {Math.round(session.durationSeconds / 60)} min
                     </Text>
@@ -154,9 +163,11 @@ export default function WorkoutsScreen() {
             </>
           }
           renderItem={({ item }) => (
-            <View style={styles.routineCard}>
-              <Text style={styles.routineName}>{item.name}</Text>
-              <Text style={styles.routineMeta}>{item.exercises.length} exercises</Text>
+            <View style={[styles.routineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.routineName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.routineMeta, { color: colors.textSecondary }]}>
+                {item.exercises.length} exercises
+              </Text>
               <Button
                 label="Start session"
                 onPress={() => void startSession(item.id)}
@@ -166,7 +177,6 @@ export default function WorkoutsScreen() {
           )}
         />
       )}
-      <Button label="Back" variant="ghost" onPress={() => router.back()} />
     </ScreenLayout>
   );
 }
@@ -174,17 +184,14 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1 },
   loader: { marginTop: 24 },
-  error: { color: "#ef4444", marginBottom: 10 },
+  error: { marginBottom: 10 },
   sectionTitle: {
-    color: "#d4d4d4",
-    fontSize: 14,
-    fontWeight: "600",
+    ...typography.label,
     marginBottom: 10,
     marginTop: 8,
     textTransform: "uppercase",
   },
   activeCard: {
-    backgroundColor: "#1a1a1a",
     borderColor: "#f97316",
     borderWidth: 1,
     borderRadius: 14,
@@ -192,37 +199,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fromSplitCard: {
-    backgroundColor: "#151515",
+    ...uiPatterns.card,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#262626",
-    padding: 12,
     marginBottom: 12,
   },
-  fromSplitTitle: { color: "#d4d4d4", fontWeight: "600", marginBottom: 8 },
+  fromSplitTitle: { ...typography.label, marginBottom: 8 },
   splitBlock: { marginBottom: 8 },
-  splitName: { color: "#a3a3a3", marginBottom: 6 },
-  activeTitle: { color: "#f97316", fontWeight: "700", marginBottom: 4 },
-  activeBody: { color: "#fff", marginBottom: 10 },
+  splitName: { ...typography.caption, marginBottom: 6 },
+  activeTitle: { ...typography.label, fontWeight: "700", marginBottom: 4 },
+  activeBody: { ...typography.body, marginBottom: 10 },
   routineCard: {
-    backgroundColor: "#1a1a1a",
+    ...uiPatterns.card,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#262626",
-    padding: 14,
     marginBottom: 10,
   },
-  routineName: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  routineMeta: { color: "#a3a3a3", marginBottom: 8 },
+  routineName: { ...typography.body, fontWeight: "700" },
+  routineMeta: { ...typography.caption, marginBottom: 8 },
   recentCard: {
-    backgroundColor: "#151515",
+    ...uiPatterns.card,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#222",
-    padding: 12,
     marginBottom: 8,
   },
-  recentName: { color: "#d4d4d4", marginBottom: 4 },
-  recentMeta: { color: "#737373", fontSize: 13 },
-  empty: { color: "#737373", marginBottom: 12 },
+  recentName: { ...typography.label, marginBottom: 4 },
+  recentMeta: { ...typography.caption },
 });

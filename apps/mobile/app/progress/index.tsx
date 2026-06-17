@@ -61,6 +61,7 @@ export default function ProgressScreen() {
     <ScreenLayout
       title="Progress history"
       subtitle="Session trends, PR highlights, and exercise-level progress."
+      withBottomNav
     >
       <View style={styles.row}>
         <Chip

@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text } from "react-native";
+import { radii, spacing, typography } from "@ironlink/shared";
+import { useThemeColors } from "../lib/theme";
 
 type Props = {
   label: string;
@@ -13,18 +15,37 @@ export function Button({
   variant = "primary",
   disabled = false,
 }: Props) {
+  const colors = useThemeColors();
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        styles[variant],
-        pressed && !disabled ? styles.pressed : null,
+        variant === "primary" ? { backgroundColor: colors.accent } : null,
+        variant === "secondary" ? { backgroundColor: colors.surfaceElevated } : null,
+        variant === "ghost" ? { backgroundColor: "transparent", borderColor: colors.border } : null,
+        variant === "danger" ? { backgroundColor: colors.danger } : null,
+        pressed && !disabled
+          ? variant === "primary"
+            ? { backgroundColor: colors.accentPressed }
+            : variant === "danger"
+              ? { backgroundColor: colors.dangerPressed }
+              : styles.pressed
+          : null,
         disabled ? styles.disabled : null,
       ]}
     >
-      <Text style={[styles.text, variant === "secondary" ? styles.textDark : null]}>
+      <Text
+        style={[
+          styles.text,
+          variant === "primary" ? { color: colors.accentText } : null,
+          variant === "secondary" ? { color: colors.textPrimary } : null,
+          variant === "ghost" ? { color: colors.textSecondary } : null,
+          variant === "danger" ? { color: "#FFFFFF" } : null,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -33,38 +54,20 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: "center",
-    marginBottom: 12,
-  },
-  primary: {
-    backgroundColor: "#f97316",
-  },
-  secondary: {
-    backgroundColor: "#fff",
-  },
-  ghost: {
-    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#333",
-  },
-  danger: {
-    backgroundColor: "#dc2626",
+    marginBottom: spacing.md,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.9,
   },
   disabled: {
     opacity: 0.5,
   },
   text: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  textDark: {
-    color: "#0f0f0f",
+    ...typography.label,
   },
 });

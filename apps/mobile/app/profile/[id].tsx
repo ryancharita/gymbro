@@ -2,10 +2,13 @@ import { useAuth } from "@clerk/clerk-expo";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Button } from "../../src/components/Button";
+import { EmptyState } from "../../src/components/EmptyState";
 import { ScreenLayout } from "../../src/components/ScreenLayout";
 import { useAppUser } from "../../src/hooks/useAppUser";
 import { createAuthenticatedClient } from "../../src/lib/auth";
+import { useThemeColors } from "../../src/lib/theme";
 import {
   FOLLOW_USER_MUTATION,
   PROFILE_QUERY,
@@ -41,6 +44,7 @@ export default function ProfileScreen() {
   getTokenRef.current = getToken;
 
   const [data, setData] = useState<ProfileData | null>(null);
+  const colors = useThemeColors();
 
   const loadProfile = useCallback(async () => {
     if (!profileId || !isLoaded || !isSignedIn) return;
@@ -71,16 +75,28 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScreenLayout title={data?.user.username ?? "Profile"} subtitle={data?.user.bio ?? "Athlete profile"}>
+    <ScreenLayout
+      title={data?.user.username ?? "Profile"}
+      subtitle={data?.user.bio ?? "Athlete profile"}
+      withBottomNav
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.statsRow}>
-          <Text style={styles.stat}>{data?.stats.totalWorkouts ?? 0} workouts</Text>
-          <Text style={styles.stat}>{data?.stats.followersCount ?? 0} followers</Text>
-          <Text style={styles.stat}>{data?.stats.followingCount ?? 0} following</Text>
-          <Text style={styles.stat}>{data?.stats.currentStreakDays ?? 0} day streak</Text>
+          <Text style={[styles.stat, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {data?.stats.totalWorkouts ?? 0} workouts
+          </Text>
+          <Text style={[styles.stat, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {data?.stats.followersCount ?? 0} followers
+          </Text>
+          <Text style={[styles.stat, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {data?.stats.followingCount ?? 0} following
+          </Text>
+          <Text style={[styles.stat, { color: colors.textPrimary, backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {data?.stats.currentStreakDays ?? 0} day streak
+          </Text>
         </View>
 
-        <Text style={styles.meta}>
+        <Text style={[styles.meta, { color: colors.textSecondary }]}>
           {[data?.user.city, data?.user.gymName].filter(Boolean).join(" · ") || "No location/gym set"}
         </Text>
 
@@ -92,50 +108,76 @@ export default function ProfileScreen() {
           />
         ) : null}
 
-        <Text style={styles.section}>Shared splits</Text>
-        {(data?.sharedSplits ?? []).map((split) => (
-          <Text key={split.id} style={styles.item}>• {split.name}</Text>
-        ))}
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Shared splits</Text>
+        {(data?.sharedSplits ?? []).length === 0 ? (
+          <EmptyState
+            icon="🧩"
+            title="No shared splits yet"
+            subtitle="Published splits will appear here once this athlete shares one."
+          />
+        ) : (
+          (data?.sharedSplits ?? []).map((split) => (
+            <Text key={split.id} style={[styles.item, { color: colors.textSecondary }]}>
+              • {split.name}
+            </Text>
+          ))
+        )}
 
-        <Text style={styles.section}>Shared routines</Text>
-        {(data?.sharedRoutines ?? []).map((routine) => (
-          <Text key={routine.id} style={styles.item}>• {routine.name}</Text>
-        ))}
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Shared routines</Text>
+        {(data?.sharedRoutines ?? []).length === 0 ? (
+          <EmptyState
+            icon="📋"
+            title="No routines shared yet"
+            subtitle="Routines will show up here when they're published."
+          />
+        ) : (
+          (data?.sharedRoutines ?? []).map((routine) => (
+            <Text key={routine.id} style={[styles.item, { color: colors.textSecondary }]}>
+              • {routine.name}
+            </Text>
+          ))
+        )}
 
-        <Text style={styles.section}>Progress posts</Text>
-        {(data?.progressPosts ?? []).map((post) => (
-          <View key={post.id} style={styles.postCard}>
-            <Text style={styles.item}>{post.content}</Text>
-            <Text style={styles.postMeta}>{new Date(post.createdAt).toLocaleString()}</Text>
-          </View>
-        ))}
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Progress posts</Text>
+        {(data?.progressPosts ?? []).length === 0 ? (
+          <EmptyState
+            icon="📈"
+            title="No progress posts yet"
+            subtitle="Workout highlights and milestones will appear in this section."
+          />
+        ) : (
+          (data?.progressPosts ?? []).map((post) => (
+            <View
+              key={post.id}
+              style={[styles.postCard, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            >
+              <Text style={[styles.item, { color: colors.textSecondary }]}>{post.content}</Text>
+              <Text style={[styles.postMeta, { color: colors.textMuted }]}>
+                {new Date(post.createdAt).toLocaleString()}
+              </Text>
+            </View>
+          ))
+        )}
       </ScrollView>
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  statsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  statsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md },
   stat: {
-    color: "#e5e5e5",
-    backgroundColor: "#171717",
-    borderColor: "#262626",
+    ...typography.caption,
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 12,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
   },
-  meta: { color: "#a3a3a3", marginBottom: 12 },
-  section: { color: "#fff", fontSize: 16, fontWeight: "700", marginTop: 16, marginBottom: 8 },
-  item: { color: "#d4d4d4", marginBottom: 6 },
+  meta: { ...typography.body, marginBottom: spacing.md },
+  section: { ...typography.heading, marginTop: spacing.lg, marginBottom: spacing.sm },
+  item: { ...typography.body, marginBottom: spacing.xs + 2 },
   postCard: {
-    borderColor: "#262626",
-    borderWidth: 1,
-    backgroundColor: "#171717",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
+    ...uiPatterns.card,
+    marginBottom: spacing.sm,
   },
-  postMeta: { color: "#a3a3a3", fontSize: 12, marginTop: 4 },
+  postMeta: { ...typography.caption, marginTop: spacing.xs },
 });
