@@ -1,42 +1,39 @@
+import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Ionicons } from "@expo/vector-icons";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { ScreenLayout } from "../../src/components/ScreenLayout";
-import { useAppUser } from "../../src/hooks/useAppUser";
+import { useProfileDashboard } from "../../src/hooks/useProfileDashboard";
 import { useThemeColors } from "../../src/lib/theme";
-
-const STATS = [
-  { label: "Workouts", value: "48" },
-  { label: "Streak", value: "6w" },
-  { label: "Volume", value: "12.4k" },
-  { label: "PRs", value: "7" },
-] as const;
-
-const ACHIEVEMENTS = [
-  { icon: "flame" as const, title: "Week Warrior", subtitle: "6-week streak" },
-  { icon: "trophy" as const, title: "Century Club", subtitle: "100+ workouts" },
-  { icon: "barbell" as const, title: "Heavy Lifter", subtitle: "10k kg volume" },
-] as const;
-
-const GOALS = [
-  { title: "Bench 100 kg", current: 92, target: 100 },
-  { title: "12 workouts this month", current: 8, target: 12 },
-  { title: "Log 10 leg days", current: 7, target: 10 },
-] as const;
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user } = useAppUser();
+  const { signOut } = useAuth();
+  const { user, stats, progress, loading } = useProfileDashboard();
   const colors = useThemeColors();
 
   const displayName = user?.username ?? "Athlete";
   const initials = displayName.slice(0, 2).toUpperCase();
 
+  const statCards = [
+    { label: "Workouts", value: String(stats?.totalWorkouts ?? 0) },
+    { label: "Streak", value: `${stats?.currentStreakDays ?? 0}d` },
+    {
+      label: "Volume",
+      value: formatVolume(progress?.sessionVolumeTrend.reduce((sum, point) => sum + point.value, 0) ?? 0),
+    },
+    { label: "PRs", value: String(progress?.totalPrs ?? 0) },
+  ];
+
+  const achievements = buildAchievements(stats, progress);
+  const goals = buildGoals(user?.goals ?? [], stats, progress);
+
   return (
     <ScreenLayout title="Profile" subtitle="Your training identity." withBottomNav>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {loading ? <ActivityIndicator color={colors.accent} style={styles.loader} /> : null}
         <View style={styles.header}>
           <View style={[styles.avatarRing, { borderColor: colors.accent }]}>
             <View style={[styles.avatar, { backgroundColor: colors.surfaceElevated }]}>
@@ -56,7 +53,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsGrid}>
-          {STATS.map((stat) => (
+          {statCards.map((stat) => (
             <View
               key={stat.label}
               style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -69,33 +66,45 @@ export default function ProfileScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Achievements</Text>
         <View style={styles.achievementList}>
-          {ACHIEVEMENTS.map((item) => (
-            <View
-              key={item.title}
-              style={[styles.achievementCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <View style={[styles.achievementIcon, { backgroundColor: colors.surfaceElevated }]}>
-                <Ionicons name={item.icon} size={18} color={colors.accent} />
+          {achievements.length > 0 ? (
+            achievements.map((item) => (
+              <View
+                key={item.title}
+                style={[styles.achievementCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <View style={[styles.achievementIcon, { backgroundColor: colors.surfaceElevated }]}>
+                  <Ionicons name={item.icon} size={18} color={colors.accent} />
+                </View>
+                <View>
+                  <Text style={[styles.achievementTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <Text style={[styles.achievementSub, { color: colors.textMuted }]}>{item.subtitle}</Text>
+                </View>
               </View>
-              <View>
-                <Text style={[styles.achievementTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-                <Text style={[styles.achievementSub, { color: colors.textMuted }]}>{item.subtitle}</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              Log workouts to unlock achievements.
+            </Text>
+          )}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Goals</Text>
         <View style={styles.goalList}>
-          {GOALS.map((goal) => (
-            <View
-              key={goal.title}
-              style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>{goal.title}</Text>
-              <ProgressBar completed={goal.current} total={goal.target} />
-            </View>
-          ))}
+          {goals.length > 0 ? (
+            goals.map((goal) => (
+              <View
+                key={goal.title}
+                style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>{goal.title}</Text>
+                <ProgressBar completed={goal.current} total={goal.target} />
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              Add goals during onboarding or in settings.
+            </Text>
+          )}
         </View>
 
         <View style={styles.links}>
@@ -103,53 +112,132 @@ export default function ProfileScreen() {
             icon="settings-outline"
             label="Account settings"
             onPress={() => router.push("/settings")}
+            colors={colors}
           />
           <SettingsLink
             icon="analytics-outline"
             label="Progress & analytics"
             onPress={() => router.push("/progress")}
+            colors={colors}
           />
           {user?.id ? (
             <SettingsLink
               icon="person-outline"
               label="Public profile"
               onPress={() => router.push(`/profile/${user.id}`)}
+              colors={colors}
             />
           ) : null}
+          <SettingsLink
+            icon="log-out-outline"
+            label="Sign out"
+            onPress={() => {
+              void signOut().then(() => router.replace("/sign-in"));
+            }}
+            colors={colors}
+            destructive
+          />
         </View>
       </ScrollView>
     </ScreenLayout>
   );
+}
 
-  function SettingsLink({
-    icon,
-    label,
-    onPress,
-  }: {
-    icon: React.ComponentProps<typeof Ionicons>["name"];
-    label: string;
-    onPress: () => void;
-  }) {
-    return (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.linkRow,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-          pressed ? { backgroundColor: colors.surfaceElevated } : null,
-        ]}
-      >
-        <Ionicons name={icon} size={20} color={colors.accent} />
-        <Text style={[styles.linkLabel, { color: colors.textPrimary }]}>{label}</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Pressable>
-    );
+function formatVolume(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  return String(Math.round(value));
+}
+
+function buildAchievements(
+  stats: { totalWorkouts: number; currentStreakDays: number } | null,
+  progress: { totalPrs: number; totalSessions: number } | null,
+) {
+  const items: Array<{ icon: "flame" | "trophy" | "barbell"; title: string; subtitle: string }> = [];
+  if ((stats?.currentStreakDays ?? 0) >= 3) {
+    items.push({
+      icon: "flame",
+      title: "Week Warrior",
+      subtitle: `${stats?.currentStreakDays ?? 0}-day streak`,
+    });
   }
+  if ((stats?.totalWorkouts ?? 0) >= 10) {
+    items.push({
+      icon: "trophy",
+      title: "Consistent Lifter",
+      subtitle: `${stats?.totalWorkouts ?? 0} workouts logged`,
+    });
+  }
+  if ((progress?.totalPrs ?? 0) >= 1) {
+    items.push({
+      icon: "barbell",
+      title: "PR Hunter",
+      subtitle: `${progress?.totalPrs ?? 0} personal records`,
+    });
+  }
+  return items;
+}
+
+function buildGoals(
+  onboardingGoals: string[],
+  stats: { totalWorkouts: number } | null,
+  progress: { totalSessions: number } | null,
+) {
+  const sessionTarget = 12;
+  const derived = [
+    {
+      title: `${sessionTarget} workouts this month`,
+      current: progress?.totalSessions ?? 0,
+      target: sessionTarget,
+    },
+  ];
+
+  const tagged = onboardingGoals.slice(0, 2).map((goal) => ({
+    title: goal,
+    current: Math.min(stats?.totalWorkouts ?? 0, 10),
+    target: 10,
+  }));
+
+  return [...tagged, ...derived];
+}
+
+function SettingsLink({
+  icon,
+  label,
+  onPress,
+  colors,
+  destructive = false,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  onPress: () => void;
+  colors: ReturnType<typeof useThemeColors>;
+  destructive?: boolean;
+}) {
+  const accent = destructive ? colors.danger : colors.accent;
+  const labelColor = destructive ? colors.danger : colors.textPrimary;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.linkRow,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        pressed ? { backgroundColor: colors.surfaceElevated } : null,
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={accent} />
+      <Text style={[styles.linkLabel, { color: labelColor }]}>{label}</Text>
+      {!destructive ? (
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      ) : null}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.md },
+  loader: { marginBottom: spacing.md },
   header: {
     alignItems: "center",
     marginBottom: spacing.lg,
@@ -257,5 +345,9 @@ const styles = StyleSheet.create({
   linkLabel: {
     ...typography.label,
     flex: 1,
+  },
+  emptyText: {
+    ...typography.body,
+    marginBottom: spacing.md,
   },
 });

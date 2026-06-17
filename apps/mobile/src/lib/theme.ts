@@ -1,7 +1,7 @@
-import { colorTokens } from "@ironlink/shared";
-import { useColorScheme } from "react-native";
+import { useTheme } from "./theme-preference";
 
 export function useThemeColors() {
-  const scheme = useColorScheme();
-  return scheme === "light" ? colorTokens.light : colorTokens.dark;
+  return useTheme().colors;
 }
+
+export type { ColorScheme, ThemeColors, ThemePreference } from "./theme-preference";

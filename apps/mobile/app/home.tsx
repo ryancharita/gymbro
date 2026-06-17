@@ -1,62 +1,133 @@
+import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Ionicons } from "@expo/vector-icons";
+import { EmptyState } from "../src/components/EmptyState";
 import { ProgressBar } from "../src/components/ProgressBar";
 import { ScreenLayout } from "../src/components/ScreenLayout";
 import { useAppUser } from "../src/hooks/useAppUser";
-import { MOCK_WEEK_PLAN, type DayStatus, type WeekDayPlan } from "../src/lib/mock-week-plan";
+import { useProfileDashboard } from "../src/hooks/useProfileDashboard";
+import { useTrainingPlan } from "../src/hooks/useTrainingPlan";
+import { createAuthenticatedClient } from "../src/lib/auth";
+import { START_WORKOUT_SESSION_MUTATION } from "../src/lib/graphql";
+import { type DayStatus, type WeekDayPlan } from "../src/lib/week-plan";
 import { useThemeColors } from "../src/lib/theme";
-
-const COMPLETED_DAYS = MOCK_WEEK_PLAN.filter((d) => d.status === "completed").length;
-const TRAINING_DAYS = MOCK_WEEK_PLAN.filter((d) => d.status !== "rest").length;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
   const { user } = useAppUser();
+  const { stats } = useProfileDashboard();
+  const {
+    activeSplit,
+    splits,
+    weekPlan,
+    weekProgress,
+    todayRoutineId,
+    avgWeeklyVolume,
+    activeSession,
+    loading,
+  } = useTrainingPlan();
   const colors = useThemeColors();
 
+  const subtitle = activeSplit
+    ? `${user?.gymName ? `${user.gymName} · ` : ""}${activeSplit.name} · ${activeSplit.daysPerWeek} Day Program`
+    : user?.gymName
+      ? `${user.gymName} · Create a split to get started`
+      : "Create a split to get started";
+
+  const startRoutine = async (routineId: string | null) => {
+    if (!routineId) {
+      router.push("/splits");
+      return;
+    }
+    if (activeSession) {
+      router.push(`/workouts/session/${activeSession.id}`);
+      return;
+    }
+    try {
+      const client = await createAuthenticatedClient(getTokenRef.current);
+      const data = await client.request<{ startWorkoutSession: { id: string } }>(
+        START_WORKOUT_SESSION_MUTATION,
+        { routineId },
+      );
+      router.push(`/workouts/session/${data.startWorkoutSession.id}`);
+    } catch (err) {
+      Alert.alert("Could not start workout", err instanceof Error ? err.message : "Try again.");
+    }
+  };
+
   return (
-    <ScreenLayout
-      title="Your Split"
-      subtitle={user?.gymName ? `${user.gymName} · 6 Day Program` : "Push/Pull/Legs · 6 Day Program"}
-      withBottomNav
-    >
+    <ScreenLayout title="Your Split" subtitle={subtitle} withBottomNav>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {loading ? <ActivityIndicator color={colors.accent} style={styles.loader} /> : null}
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>This Week</Text>
         </View>
-        <ProgressBar completed={COMPLETED_DAYS} total={TRAINING_DAYS} label="Week progress" />
+        {weekProgress.total > 0 ? (
+          <ProgressBar
+            completed={weekProgress.completed}
+            total={weekProgress.total}
+            label="Week progress"
+          />
+        ) : null}
 
-        <View style={styles.dayList}>
-          {MOCK_WEEK_PLAN.map((day) => (
-            <DayCard key={day.id} day={day} onStart={() => router.push("/workouts")} />
-          ))}
-        </View>
+        {weekPlan.length > 0 ? (
+          <View style={styles.dayList}>
+            {weekPlan.map((day) => (
+              <DayCard
+                key={day.id}
+                day={day}
+                onStart={() => void startRoutine(day.routineId ?? todayRoutineId)}
+              />
+            ))}
+          </View>
+        ) : (
+          <EmptyState
+            icon="📅"
+            title="No active split"
+            subtitle="Create or publish a split to see your weekly plan."
+          />
+        )}
 
         <View style={styles.statsRow}>
-          <MetricCard icon="trending-up" value="6" label="Week Streak" />
-          <MetricCard icon="barbell" value="48" label="Workouts" />
-          <MetricCard icon="flash" value="387" label="Avg Cals" />
+          <MetricCard
+            icon="trending-up"
+            value={String(stats?.currentStreakDays ?? 0)}
+            label="Week Streak"
+          />
+          <MetricCard icon="barbell" value={String(stats?.totalWorkouts ?? 0)} label="Workouts" />
+          <MetricCard icon="flash" value={String(avgWeeklyVolume)} label="Avg kg" />
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Split Templates</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Splits</Text>
           <Pressable onPress={() => router.push("/splits")}>
             <Text style={[styles.linkLabel, { color: colors.accent }]}>Edit Split</Text>
           </Pressable>
         </View>
         <View style={styles.grid}>
-          <ActionCard
-            title="Upper/Lower Split"
-            description="4 days/week · Beginner friendly"
-            onPress={() => router.push("/splits")}
-          />
-          <ActionCard
-            title="Bro Split"
-            description="5 days/week · Muscle isolation"
-            onPress={() => router.push("/routines")}
-          />
+          {splits.length > 0 ? (
+            splits.slice(0, 2).map((split) => (
+              <ActionCard
+                key={split.id}
+                title={split.name}
+                description={`${split.daysPerWeek} days/week · ${split.difficulty.toLowerCase()}`}
+                onPress={() => router.push("/splits")}
+              />
+            ))
+          ) : (
+            <ActionCard
+              title="Create your first split"
+              description="Build a weekly program from your routines"
+              onPress={() => router.push("/splits/create")}
+            />
+          )}
           <ActionCard
             title="Create Custom Split"
             description="Design your own program"
@@ -65,6 +136,26 @@ export default function HomeScreen() {
           />
         </View>
 
+        <ActiveBuddiesSection />
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            icon="add-circle-outline"
+            label="Log Workout"
+            onPress={() => void startRoutine(todayRoutineId)}
+          />
+          <QuickAction icon="timer-outline" label="Workouts" onPress={() => router.push("/workouts")} />
+        </View>
+      </ScrollView>
+    </ScreenLayout>
+  );
+
+  function ActiveBuddiesSection() {
+    const { following } = useProfileDashboard();
+    const buddies = following.slice(0, 2);
+
+    return (
+      <>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Active Buddies</Text>
           <Pressable onPress={() => router.push("/feed")}>
@@ -72,17 +163,26 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         <View style={styles.grid}>
-          <BuddyRow name="Sarah Chen" status="Working out now · Leg Day" onJoin={() => router.push("/workouts")} />
-          <BuddyRow name="Marcus Johnson" status="At gym · Cardio Session" onJoin={() => router.push("/workouts")} />
+          {buddies.length > 0 ? (
+            buddies.map((buddy) => (
+              <BuddyRow
+                key={buddy.id}
+                name={buddy.username ?? "Athlete"}
+                status={buddy.gymName ? `Trains at ${buddy.gymName}` : "Training partner"}
+                onJoin={() => router.push(`/profile/${buddy.id}`)}
+              />
+            ))
+          ) : (
+            <EmptyState
+              icon="🤝"
+              title="No buddies yet"
+              subtitle="Discover athletes to train with on the Discover tab."
+            />
+          )}
         </View>
-
-        <View style={styles.quickActions}>
-          <QuickAction icon="add-circle-outline" label="Log Workout" onPress={() => router.push("/workouts")} />
-          <QuickAction icon="timer-outline" label="Set Timer" onPress={() => router.push("/workouts")} />
-        </View>
-      </ScrollView>
-    </ScreenLayout>
-  );
+      </>
+    );
+  }
 
   function DayCard({ day, onStart }: { day: WeekDayPlan; onStart: () => void }) {
     const isToday = day.status === "today";
@@ -292,6 +392,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.md,
+  },
+  loader: {
+    marginBottom: spacing.md,
   },
   sectionTitle: {
     ...typography.heading,

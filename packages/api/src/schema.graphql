@@ -339,6 +339,7 @@ type Query {
   profile(userId: ID!): UserProfile
   myFollowers: [User!]!
   myFollowing: [User!]!
+  discoverUsers(search: String, limit: Int = 20, offset: Int = 0): [User!]!
   homeFeed(limit: Int = 30, offset: Int = 0): [Post!]!
 }
 
