@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { label: "Home", href: "/home", icon: "home-outline", iconActive: "home" },
   { label: "Discover", href: "/feed", icon: "search-outline", iconActive: "search" },
   { label: "Workouts", href: "/workouts", icon: "bar-chart-outline", iconActive: "bar-chart" },
-  { label: "Profile", href: "/settings", icon: "person-outline", iconActive: "person" },
+  { label: "Profile", href: "/profile", icon: "person-outline", iconActive: "person" },
 ] as const;
 
 export function BottomNav() {
@@ -22,7 +22,7 @@ export function BottomNav() {
         const active =
           pathname === item.href ||
           pathname.startsWith(`${item.href}/`) ||
-          (item.href === "/settings" && pathname.startsWith("/profile/"));
+          (item.href === "/profile" && (pathname.startsWith("/profile/") || pathname === "/settings"));
         return (
           <Pressable
             key={item.href}

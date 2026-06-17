@@ -9,8 +9,8 @@ export const spacing = {
 
 export const radii = {
   sm: 10,
-  md: 14,
-  lg: 18,
+  md: 16,
+  lg: 20,
   pill: 999,
 } as const;
 
@@ -24,18 +24,18 @@ export const typography = {
 
 export const colorTokens = {
   dark: {
-    bg: "#060D22",
-    surface: "#0D1632",
-    surfaceElevated: "#14224A",
-    border: "#1F2B52",
+    bg: "#0A0E1A",
+    surface: "#151B2D",
+    surfaceElevated: "#1C2438",
+    border: "rgba(255,255,255,0.1)",
     textPrimary: "#F8FAFF",
-    textSecondary: "#A9B4D4",
-    textMuted: "#7E8BB0",
-    accent: "#FF4D5A",
-    accentPressed: "#E93E4B",
+    textSecondary: "#B8C4E0",
+    textMuted: "#8896B8",
+    accent: "#FF4444",
+    accentPressed: "#E63B3B",
     accentText: "#FFFFFF",
-    danger: "#FF4D5A",
-    dangerPressed: "#E93E4B",
+    danger: "#FF4444",
+    dangerPressed: "#E63B3B",
   },
   light: {
     bg: "#F4F7FF",
