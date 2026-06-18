@@ -675,3 +675,32 @@ export const UNFOLLOW_USER_MUTATION = `
     unfollowUser(userId: $userId)
   }
 `;
+
+const USER_DISCOVERY_FIELDS = `
+  id
+  username
+  bio
+  profilePhotoUrl
+  city
+  gymName
+  experienceLevel
+  trainingStyleTags
+  goals
+  onboardingComplete
+`;
+
+export const MY_FOLLOWING_QUERY = `
+  query MyFollowing {
+    myFollowing {
+      ${USER_DISCOVERY_FIELDS}
+    }
+  }
+`;
+
+export const DISCOVER_USERS_QUERY = `
+  query DiscoverUsers($search: String, $limit: Int, $offset: Int) {
+    discoverUsers(search: $search, limit: $limit, offset: $offset) {
+      ${USER_DISCOVERY_FIELDS}
+    }
+  }
+`;

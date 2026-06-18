@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -13,7 +15,9 @@ import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Ionicons } from "@expo/vector-icons";
 import { Chip } from "../src/components/Chip";
 import { ScreenLayout } from "../src/components/ScreenLayout";
-import { MOCK_BUDDIES, type DiscoverBuddy } from "../src/lib/mock-week-plan";
+import { useAppUser } from "../src/hooks/useAppUser";
+import { useDiscover } from "../src/hooks/useDiscover";
+import { type DiscoverBuddy } from "../src/lib/week-plan";
 import { useThemeColors } from "../src/lib/theme";
 
 const FILTERS = ["All", "Nearby", "Same Gym", "PPL", "Morning", "Evening"] as const;
@@ -21,27 +25,10 @@ const FILTERS = ["All", "Nearby", "Same Gym", "PPL", "Morning", "Evening"] as co
 export default function DiscoverScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const { user } = useAppUser();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
-
-  const buddies = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return MOCK_BUDDIES.filter((buddy) => {
-      const matchesQuery =
-        !normalized ||
-        buddy.name.toLowerCase().includes(normalized) ||
-        buddy.gym.toLowerCase().includes(normalized) ||
-        buddy.tags.some((tag) => tag.toLowerCase().includes(normalized));
-
-      const matchesFilter =
-        activeFilter === "All" ||
-        (activeFilter === "Nearby" && buddy.distance.includes("mi")) ||
-        (activeFilter === "Same Gym" && buddy.gym.toLowerCase().includes("iron")) ||
-        buddy.tags.some((tag) => tag.toLowerCase().includes(activeFilter.toLowerCase()));
-
-      return matchesQuery && matchesFilter;
-    });
-  }, [query, activeFilter]);
+  const { buddies, loading, connect } = useDiscover(query, activeFilter, user?.gymName);
 
   return (
     <ScreenLayout
@@ -82,9 +69,13 @@ export default function DiscoverScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => <BuddyCard buddy={item} />}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.textMuted }]}>
-            No buddies match your search. Try a different filter.
-          </Text>
+          loading ? (
+            <ActivityIndicator color={colors.accent} style={styles.loader} />
+          ) : (
+            <Text style={[styles.empty, { color: colors.textMuted }]}>
+              No athletes match your search. Try a different filter.
+            </Text>
+          )
         }
       />
     </ScreenLayout>
@@ -105,12 +96,20 @@ export default function DiscoverScreen() {
           <View style={styles.cardMeta}>
             <Text style={[styles.name, { color: colors.textPrimary }]}>{buddy.name}</Text>
             <Text style={[styles.gym, { color: colors.textMuted }]}>
-              {buddy.gym} · {buddy.distance}
+              {buddy.gym}
+              {buddy.distance ? ` · ${buddy.distance}` : ""}
             </Text>
             <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={colors.accent} />
-              <Text style={[styles.rating, { color: colors.textSecondary }]}>{buddy.rating}</Text>
-              <Text style={[styles.status, { color: colors.accent }]}> · {buddy.status}</Text>
+              {buddy.rating ? (
+                <>
+                  <Ionicons name="star" size={14} color={colors.accent} />
+                  <Text style={[styles.rating, { color: colors.textSecondary }]}>{buddy.rating}</Text>
+                </>
+              ) : null}
+              <Text style={[styles.status, { color: colors.accent }]}>
+                {buddy.rating ? " · " : ""}
+                {buddy.status}
+              </Text>
             </View>
           </View>
         </View>
@@ -128,14 +127,37 @@ export default function DiscoverScreen() {
 
         <View style={styles.actions}>
           <Pressable
+            onPress={() => {
+              if (buddy.isFollowing) {
+                router.push(`/profile/${buddy.id}`);
+                return;
+              }
+              void connect(buddy.id).catch((err) => {
+                Alert.alert("Could not connect", err instanceof Error ? err.message : "Try again.");
+              });
+            }}
             style={({ pressed }) => [
               styles.actionBtn,
-              { backgroundColor: pressed ? colors.accentPressed : colors.accent },
+              {
+                backgroundColor: buddy.isFollowing
+                  ? colors.surfaceElevated
+                  : pressed
+                    ? colors.accentPressed
+                    : colors.accent,
+              },
             ]}
           >
-            <Text style={[styles.actionBtnText, { color: colors.accentText }]}>Connect</Text>
+            <Text
+              style={[
+                styles.actionBtnText,
+                { color: buddy.isFollowing ? colors.textPrimary : colors.accentText },
+              ]}
+            >
+              {buddy.isFollowing ? "View profile" : "Connect"}
+            </Text>
           </Pressable>
           <Pressable
+            onPress={() => router.push(`/profile/${buddy.id}`)}
             style={({ pressed }) => [
               styles.actionBtnOutline,
               {
@@ -144,7 +166,7 @@ export default function DiscoverScreen() {
               },
             ]}
           >
-            <Text style={[styles.actionBtnOutlineText, { color: colors.textPrimary }]}>Message</Text>
+            <Text style={[styles.actionBtnOutlineText, { color: colors.textPrimary }]}>Profile</Text>
           </Pressable>
         </View>
       </View>
@@ -181,6 +203,9 @@ const styles = StyleSheet.create({
   empty: {
     ...typography.body,
     textAlign: "center",
+    marginTop: spacing.xl,
+  },
+  loader: {
     marginTop: spacing.xl,
   },
   card: {

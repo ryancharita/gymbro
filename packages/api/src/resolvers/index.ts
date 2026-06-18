@@ -323,6 +323,45 @@ export const resolvers = {
       return follows.map((f) => f.following);
     },
 
+    discoverUsers: async (
+      _p: unknown,
+      args: { search?: string; limit?: number; offset?: number },
+      context: unknown,
+    ) => {
+      const user = requireAuth(getContext(context));
+      const limit = Math.min(args.limit ?? 20, 50);
+      const offset = args.offset ?? 0;
+      const search = args.search?.trim();
+
+      const following = await prisma.follow.findMany({
+        where: { followerId: user.id },
+        select: { followingId: true },
+      });
+      const excludedIds = new Set([user.id, ...following.map((f) => f.followingId)]);
+
+      return prisma.user.findMany({
+        where: {
+          id: { notIn: [...excludedIds] },
+          onboardingComplete: true,
+          optOutBuddyFinder: false,
+          isPrivateProfile: false,
+          ...(search
+            ? {
+                OR: [
+                  { username: { contains: search, mode: "insensitive" } },
+                  { gymName: { contains: search, mode: "insensitive" } },
+                  { city: { contains: search, mode: "insensitive" } },
+                  { bio: { contains: search, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+    },
+
     homeFeed: async (
       _p: unknown,
       args: { limit?: number; offset?: number },

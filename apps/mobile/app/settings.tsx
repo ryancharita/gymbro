@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { spacing, typography } from "@ironlink/shared";
 import { Button } from "../src/components/Button";
 import { FormField } from "../src/components/FormField";
 import { ScreenLayout } from "../src/components/ScreenLayout";
@@ -20,12 +21,14 @@ import {
   UPDATE_PREFERENCES_MUTATION,
   UPDATE_PROFILE_MUTATION,
 } from "../src/lib/graphql";
+import { useTheme } from "../src/lib/theme-preference";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { getToken, signOut } = useAuth();
   const { user: clerkUser } = useUser();
   const { user, refresh } = useAppUser();
+  const { preference, setPreference, isDark, colors } = useTheme();
 
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -121,6 +124,11 @@ export default function SettingsScreen() {
     await WebBrowser.openBrowserAsync(portalUrl);
   };
 
+  const onSignOut = async () => {
+    await signOut();
+    router.replace("/sign-in");
+  };
+
   const onDeleteAccount = () => {
     Alert.alert(
       "Delete account",
@@ -157,33 +165,53 @@ export default function SettingsScreen() {
       withBottomNav
     >
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.section}>Profile</Text>
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Profile</Text>
         <FormField label="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />
         <FormField label="Bio" value={bio} onChangeText={setBio} multiline style={styles.multiline} />
         <FormField label="Gym" value={gymName} onChangeText={setGymName} />
         <FormField label="City" value={city} onChangeText={setCity} />
         <Button label={saving ? "Saving…" : "Save profile"} onPress={() => void saveProfile()} disabled={saving} />
 
-        <Text style={styles.section}>Clerk account</Text>
-        <Text style={styles.meta}>Signed in as {clerkUser?.primaryEmailAddress?.emailAddress}</Text>
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Clerk account</Text>
+        <Text style={[styles.meta, { color: colors.textMuted }]}>
+          Signed in as {clerkUser?.primaryEmailAddress?.emailAddress}
+        </Text>
         <Button
           label="Manage password & connected accounts"
           variant="ghost"
           onPress={() => void openClerkAccount()}
         />
 
-        <Text style={styles.section}>Notifications</Text>
-        <ToggleRow label="New followers" value={notifyOnFollow} onChange={setNotifyOnFollow} />
-        <ToggleRow label="Likes on posts" value={notifyOnLike} onChange={setNotifyOnLike} />
-        <ToggleRow label="Comments on posts" value={notifyOnComment} onChange={setNotifyOnComment} />
-        <ToggleRow label="Weekly summary" value={notifyWeeklySummary} onChange={setNotifyWeeklySummary} />
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Appearance</Text>
+        <ToggleRow
+          label="Dark mode"
+          value={isDark}
+          onChange={(enabled) => setPreference(enabled ? "dark" : "light")}
+          colors={colors}
+        />
+        {preference === "system" ? (
+          <Text style={[styles.meta, { color: colors.textMuted }]}>Following your device theme</Text>
+        ) : (
+          <Button
+            label="Use device theme"
+            variant="ghost"
+            onPress={() => setPreference("system")}
+          />
+        )}
 
-        <Text style={styles.section}>Privacy</Text>
-        <ToggleRow label="Private profile" value={isPrivateProfile} onChange={setIsPrivateProfile} />
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Notifications</Text>
+        <ToggleRow label="New followers" value={notifyOnFollow} onChange={setNotifyOnFollow} colors={colors} />
+        <ToggleRow label="Likes on posts" value={notifyOnLike} onChange={setNotifyOnLike} colors={colors} />
+        <ToggleRow label="Comments on posts" value={notifyOnComment} onChange={setNotifyOnComment} colors={colors} />
+        <ToggleRow label="Weekly summary" value={notifyWeeklySummary} onChange={setNotifyWeeklySummary} colors={colors} />
+
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Privacy</Text>
+        <ToggleRow label="Private profile" value={isPrivateProfile} onChange={setIsPrivateProfile} colors={colors} />
         <ToggleRow
           label="Opt out of Buddy Finder"
           value={optOutBuddyFinder}
           onChange={setOptOutBuddyFinder}
+          colors={colors}
         />
         <Button
           label={saving ? "Saving…" : "Save preferences"}
@@ -192,8 +220,9 @@ export default function SettingsScreen() {
           disabled={saving}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
+        <Button label="Sign out" variant="ghost" onPress={() => void onSignOut()} />
         <Button label="Delete account" variant="danger" onPress={onDeleteAccount} />
         <Button label="Back to home" variant="ghost" onPress={() => router.back()} />
       </ScrollView>
@@ -205,18 +234,25 @@ function ToggleRow({
   label,
   value,
   onChange,
+  colors,
 }: {
   label: string;
   value: boolean;
   onChange: (next: boolean) => void;
+  colors: {
+    border: string;
+    textPrimary: string;
+    accent: string;
+    surfaceElevated: string;
+  };
 }) {
   return (
-    <View style={styles.toggleRow}>
-      <Text style={styles.toggleLabel}>{label}</Text>
+    <View style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
+      <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: "#333", true: "#fb923c" }}
+        trackColor={{ false: colors.surfaceElevated, true: colors.accent }}
         thumbColor="#fff"
       />
     </View>
@@ -225,15 +261,15 @@ function ToggleRow({
 
 const styles = StyleSheet.create({
   section: {
-    color: "#fff",
+    ...typography.heading,
     fontSize: 18,
-    fontWeight: "600",
-    marginTop: 8,
-    marginBottom: 12,
+    lineHeight: 24,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   meta: {
-    color: "#737373",
-    marginBottom: 12,
+    ...typography.caption,
+    marginBottom: spacing.md,
   },
   multiline: {
     minHeight: 80,
@@ -243,18 +279,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#262626",
   },
   toggleLabel: {
-    color: "#d4d4d4",
-    fontSize: 15,
+    ...typography.body,
     flex: 1,
-    paddingRight: 12,
+    paddingRight: spacing.md,
   },
   error: {
-    color: "#ef4444",
-    marginVertical: 12,
+    marginVertical: spacing.md,
   },
 });

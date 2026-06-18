@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,77 +13,55 @@ import {
 import { spacing, typography, uiPatterns } from "@ironlink/shared";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../src/components/Button";
+import { EmptyState } from "../../src/components/EmptyState";
 import { ProgressBar } from "../../src/components/ProgressBar";
 import { ScreenLayout } from "../../src/components/ScreenLayout";
+import { useTrainingPlan } from "../../src/hooks/useTrainingPlan";
 import { createAuthenticatedClient } from "../../src/lib/auth";
-import {
-  MOCK_WORKOUT_DAYS,
-  type WorkoutDayPlan,
-  type WorkoutExercise,
-} from "../../src/lib/mock-week-plan";
+import { START_WORKOUT_SESSION_MUTATION } from "../../src/lib/graphql";
+import { type WorkoutDayPlan, type WorkoutExercise } from "../../src/lib/week-plan";
 import { useThemeColors } from "../../src/lib/theme";
-import {
-  ACTIVE_WORKOUT_SESSION_QUERY,
-  START_WORKOUT_SESSION_MUTATION,
-  MY_ROUTINES_QUERY,
-  type Routine,
-  type WorkoutSession,
-} from "../../src/lib/graphql";
 
 export default function WorkoutsScreen() {
   const router = useRouter();
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken } = useAuth();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
 
-  const [loading, setLoading] = useState(true);
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
-  const [routines, setRoutines] = useState<Routine[]>([]);
-  const [expandedDayId, setExpandedDayId] = useState<string | null>("wed");
+  const {
+    activeSession,
+    workoutDays,
+    weekProgress,
+    todayRoutineId,
+    loading,
+    error,
+  } = useTrainingPlan();
   const colors = useThemeColors();
+  const [expandedDayId, setExpandedDayId] = useState<string | null>(null);
 
-  const completedDays = MOCK_WORKOUT_DAYS.filter((d) => d.status === "completed").length;
+  const defaultExpanded =
+    workoutDays.find((day) => day.status === "today")?.id ??
+    workoutDays.find((day) => day.status === "upcoming")?.id ??
+    workoutDays[0]?.id ??
+    null;
+  const expandedId = expandedDayId ?? defaultExpanded;
 
-  const load = useCallback(async () => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      setLoading(false);
+  const startSession = async (routineId?: string | null) => {
+    const targetRoutineId = routineId ?? todayRoutineId;
+    if (!targetRoutineId) {
+      Alert.alert("No routine scheduled", "Assign routines to your split days first.");
+      router.push("/splits");
       return;
     }
-    setLoading(true);
-    try {
-      const client = await createAuthenticatedClient(getTokenRef.current);
-      const [activeData, routineData] = await Promise.all([
-        client.request<{ activeWorkoutSession: WorkoutSession | null }>(
-          ACTIVE_WORKOUT_SESSION_QUERY,
-        ),
-        client.request<{ myRoutines: Routine[] }>(MY_ROUTINES_QUERY),
-      ]);
-      setActiveSession(activeData.activeWorkoutSession);
-      setRoutines(routineData.myRoutines);
-    } finally {
-      setLoading(false);
-    }
-  }, [isLoaded, isSignedIn]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
-
-  const startSession = async () => {
-    const routine = routines[0];
-    if (!routine) {
-      Alert.alert("No routines", "Create a routine first to start logging.");
-      router.push("/routines");
+    if (activeSession) {
+      router.push(`/workouts/session/${activeSession.id}`);
       return;
     }
     try {
       const client = await createAuthenticatedClient(getTokenRef.current);
-      const data = await client.request<{ startWorkoutSession: WorkoutSession }>(
+      const data = await client.request<{ startWorkoutSession: { id: string } }>(
         START_WORKOUT_SESSION_MUTATION,
-        { routineId: routine.id },
+        { routineId: targetRoutineId },
       );
       router.push(`/workouts/session/${data.startWorkoutSession.id}`);
     } catch (err) {
@@ -97,6 +75,7 @@ export default function WorkoutsScreen() {
       subtitle="Your weekly plan and exercise log."
       withBottomNav
     >
+      {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
       {loading ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
       ) : (
@@ -119,18 +98,33 @@ export default function WorkoutsScreen() {
             </View>
           ) : null}
 
-          <ProgressBar completed={completedDays} total={MOCK_WORKOUT_DAYS.length} label="This week" />
+          {weekProgress.total > 0 ? (
+            <ProgressBar
+              completed={weekProgress.completed}
+              total={weekProgress.total}
+              label="This week"
+            />
+          ) : null}
 
-          <View style={styles.dayList}>
-            {MOCK_WORKOUT_DAYS.map((day) => (
-              <WorkoutDayCard
-                key={day.id}
-                day={day}
-                expanded={expandedDayId === day.id}
-                onToggle={() => setExpandedDayId((current) => (current === day.id ? null : day.id))}
-              />
-            ))}
-          </View>
+          {workoutDays.length > 0 ? (
+            <View style={styles.dayList}>
+              {workoutDays.map((day) => (
+                <WorkoutDayCard
+                  key={day.id}
+                  day={day}
+                  expanded={expandedId === day.id}
+                  onToggle={() => setExpandedDayId((current) => (current === day.id ? null : day.id))}
+                  onStart={() => void startSession(day.routineId)}
+                />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              icon="🏋️"
+              title="No workout plan yet"
+              subtitle="Assign routines to your split days to see exercises here."
+            />
+          )}
 
           <Button
             label="Quick Log Exercise"
@@ -146,10 +140,12 @@ export default function WorkoutsScreen() {
     day,
     expanded,
     onToggle,
+    onStart,
   }: {
     day: WorkoutDayPlan;
     expanded: boolean;
     onToggle: () => void;
+    onStart: () => void;
   }) {
     const isToday = day.status === "today";
     const isCompleted = day.status === "completed";
@@ -189,6 +185,17 @@ export default function WorkoutsScreen() {
             {day.exercises.map((exercise) => (
               <ExerciseRow key={exercise.id} exercise={exercise} />
             ))}
+            {isToday ? (
+              <Pressable
+                onPress={onStart}
+                style={({ pressed }) => [
+                  styles.startBtn,
+                  { backgroundColor: pressed ? colors.accentPressed : colors.accent },
+                ]}
+              >
+                <Text style={[styles.startBtnText, { color: colors.accentText }]}>Start Workout</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -223,6 +230,7 @@ export default function WorkoutsScreen() {
 
 const styles = StyleSheet.create({
   loader: { marginTop: spacing.xl },
+  error: { marginBottom: spacing.sm },
   content: { paddingBottom: spacing.md },
   activeCard: {
     ...uiPatterns.card,
@@ -280,4 +288,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  startBtn: {
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.sm,
+  },
+  startBtnText: { ...typography.label, fontWeight: "700" },
 });
